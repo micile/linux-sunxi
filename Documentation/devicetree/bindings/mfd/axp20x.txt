@@ -17,6 +17,20 @@ Required properties:
 - #interrupt-cells: Should be set to 1
 
 Optional properties:
+- backup: Settings for backup/RTC battery charger
+					(Voltage in uV, current in uA)
+					If not present, charger will be left untouched
+- battery.ocv: OCV capacity curve points (16 data values)
+- battery.resistance: internal battery resistance in mohm
+					(defaults to 100mohm)
+- battery.capacity: Battery capacity in mAh
+					If this attribute is missing, charger will be disabled
+					unless there is a battery connected.
+- battery.temp_sensor: Description of temperautre sensor, 3 values
+					- driver current (20uA, 40uA, 60uA or 80uA)
+					- low temperature warning level (in uV)
+					- high temperature warning level (in uV)
+					If missing, temperature sensor gets disabled
 - x-powers,dcdc-freq: defines the work frequency of DC-DC in KHz
 		      (range: 750-1875). Default: 1.5MHz
 - <input>-supply: a phandle to the regulator supply node. May be omitted if
@@ -86,6 +100,12 @@ axp209: pmic@34 {
 	interrupts = <0 IRQ_TYPE_LEVEL_LOW>;
 	interrupt-controller;
 	#interrupt-cells = <1>;
+
+	backup = <3000000 200>;
+	battery.ocv = <0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0>;
+	battery.resistance = <0>;
+	battery.capacity = <2000>;
+	battery.temp_sensor = <20 1000000 4000000>;
 
 	regulators {
 		x-powers,dcdc-freq = <1500>;

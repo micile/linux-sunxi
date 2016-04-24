@@ -511,5 +511,14 @@ config AXP20X_POWER
 
 endif # POWER_SUPPLY
 
+config AXP20X_POWER
+	tristate "AXP20x power supply driver"
+	depends on MFD_AXP20X
+	help
+	  This driver provides support for the power supply features of
+	  AXP20x PMIC.
+	  Included features are: AC-power, USB-power, Battery charger
+	  (RTC backup-battery and Lithium main bettery).
+
 source "drivers/power/reset/Kconfig"
 source "drivers/power/avs/Kconfig"

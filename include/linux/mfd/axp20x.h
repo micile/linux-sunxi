@@ -228,6 +228,11 @@ enum {
 #define AXP288_FG_TUNE4             0xec
 #define AXP288_FG_TUNE5             0xed
 
+/* OCV */
+#define AXP20X_RDC_H			0xba
+#define AXP20X_RDC_L			0xbb
+#define AXP20X_OCV(m)			(0xc0 + (m))
+
 /* Regulators IDs */
 enum {
 	AXP20X_LDO1 = 0,
