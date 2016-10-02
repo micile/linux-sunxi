@@ -26,4 +26,13 @@ config SND_SUN4I_SPDIF
 	help
 	  Say Y or M to add support for the S/PDIF audio block in the Allwinner
 	  A10 and affiliated SoCs.
+
+config SND_SUN8I_CODEC
+	tristate "Allwinner A33 Codec Support"
+	select SND_SOC_GENERIC_DMAENGINE_PCM
+	select REGMAP_MMIO
+	help
+	  Select Y or M to add support for the Codec embedded in the Allwinner
+	  A33 and affiliated SoCs.
+
 endmenu

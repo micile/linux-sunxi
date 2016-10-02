@@ -22,7 +22,9 @@
 
 #define CLK_PLL_CPUX		0
 #define CLK_PLL_AUDIO_BASE	1
-#define CLK_PLL_AUDIO		2
+
+/* The CLK_PLL_AUDIO clock is exported */
+
 #define CLK_PLL_AUDIO_2X	3
 #define CLK_PLL_AUDIO_4X	4
 #define CLK_PLL_AUDIO_8X	5
