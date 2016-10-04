@@ -33,6 +33,13 @@ source "drivers/net/wireless/st/Kconfig"
 source "drivers/net/wireless/ti/Kconfig"
 source "drivers/net/wireless/zydas/Kconfig"
 
+config RTL8723BS_STUB
+	tristate "Stub for RTL8723BS out of tree driver"
+	select WIRELESS_EXT
+	select WEXT_PRIV
+	---help---
+	  Say Y here if you intend to build out the RTL8723BS out of tree driver.
+
 config PCMCIA_RAYCS
 	tristate "Aviator/Raytheon 2.4GHz wireless support"
 	depends on PCMCIA
