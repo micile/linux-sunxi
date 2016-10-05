@@ -97,6 +97,7 @@ static const struct regmap_range axp22x_writeable_ranges[] = {
 static const struct regmap_range axp22x_volatile_ranges[] = {
 	regmap_reg_range(AXP20X_PWR_INPUT_STATUS, AXP20X_PWR_OP_MODE),
 	regmap_reg_range(AXP20X_IRQ1_EN, AXP20X_IRQ5_STATE),
+	regmap_reg_range(AXP20X_BATT_V_H, AXP20X_BATT_DISCHRG_I_L),
 	regmap_reg_range(AXP22X_GPIO_STATE, AXP22X_GPIO_STATE),
 	regmap_reg_range(AXP20X_FG_RES, AXP20X_FG_RES),
 };
@@ -162,6 +163,12 @@ static struct resource axp20x_ac_power_supply_resources[] = {
 	DEFINE_RES_IRQ_NAMED(AXP20X_IRQ_ACIN_OVER_V, "ACIN_OVER_V"),
 };
 
+static struct resource axp22x_ac_power_supply_resources[] = {
+	DEFINE_RES_IRQ_NAMED(AXP20X_IRQ_ACIN_PLUGIN, "ACIN_PLUGIN"),
+	DEFINE_RES_IRQ_NAMED(AXP20X_IRQ_ACIN_REMOVAL, "ACIN_REMOVAL"),
+	DEFINE_RES_IRQ_NAMED(AXP20X_IRQ_ACIN_OVER_V, "ACIN_OVER_V"),
+};
+
 static struct resource axp20x_pek_resources[] = {
 	{
 		.name	= "PEK_DBR",
@@ -174,6 +181,16 @@ static struct resource axp20x_pek_resources[] = {
 		.end	= AXP20X_IRQ_PEK_FAL_EDGE,
 		.flags	= IORESOURCE_IRQ,
 	},
+};
+
+static struct resource axp20x_battery_power_supply_resources[] = {
+	DEFINE_RES_IRQ_NAMED(AXP20X_IRQ_BATT_PLUGIN, "BATT_PLUGIN"),
+	DEFINE_RES_IRQ_NAMED(AXP20X_IRQ_BATT_REMOVAL, "BATT_REMOVAL"),
+};
+
+static struct resource axp22x_battery_power_supply_resources[] = {
+	DEFINE_RES_IRQ_NAMED(AXP20X_IRQ_BATT_PLUGIN, "BATT_PLUGIN"),
+	DEFINE_RES_IRQ_NAMED(AXP20X_IRQ_BATT_REMOVAL, "BATT_REMOVAL"),
 };
 
 static struct resource axp20x_usb_power_supply_resources[] = {
@@ -580,6 +597,11 @@ static struct mfd_cell axp20x_cells[] = {
 		.num_resources	= ARRAY_SIZE(axp20x_ac_power_supply_resources),
 		.resources	= axp20x_ac_power_supply_resources,
 	}, {
+		.name		= "axp20x-batteryc-power-supply",
+		.of_compatible	= "x-powers,axp202-battery-power-supply",
+		.num_resources	= ARRAY_SIZE(axp20x_battery_power_supply_resources),
+		.resources	= axp22x_battery_power_supply_resources,
+	}, {
 		.name		= "axp20x-usb-power-supply",
 		.of_compatible	= "x-powers,axp202-usb-power-supply",
 		.num_resources	= ARRAY_SIZE(axp20x_usb_power_supply_resources),
@@ -594,6 +616,16 @@ static struct mfd_cell axp22x_cells[] = {
 		.resources		= axp22x_pek_resources,
 	}, {
 		.name			= "axp20x-regulator",
+	}, {
+		.name		= "axp20x-ac-power-supply",
+		.of_compatible	= "x-powers,axp221-ac-power-supply",
+		.num_resources	= ARRAY_SIZE(axp22x_ac_power_supply_resources),
+		.resources	= axp22x_ac_power_supply_resources,
+	}, {
+		.name		= "axp20x-batteryc-power-supply",
+		.of_compatible	= "x-powers,axp221-battery-power-supply",
+		.num_resources	= ARRAY_SIZE(axp22x_battery_power_supply_resources),
+		.resources	= axp22x_battery_power_supply_resources,
 	}, {
 		.name		= "axp20x-usb-power-supply",
 		.of_compatible	= "x-powers,axp221-usb-power-supply",
