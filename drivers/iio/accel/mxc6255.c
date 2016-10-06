@@ -26,7 +26,9 @@
 #define MXC6255_REG_YOUT		0x01
 #define MXC6255_REG_CHIP_ID		0x08
 
-#define MXC6255_CHIP_ID			0x05
+#define MXC6255XC_CHIP_ID		0x05
+#define MXC6255XU_CHIP_ID		0x45
+
 
 /*
  * MXC6255 has only one measurement range: +/- 2G.
@@ -154,7 +156,7 @@ static int mxc6255_probe(struct i2c_client *client,
 		return ret;
 	}
 
-	if (chip_id != MXC6255_CHIP_ID) {
+	if ((chip_id != MXC6255XC_CHIP_ID) && (chip_id != MXC6255XU_CHIP_ID)) {
 		dev_err(&client->dev, "Invalid chip id %x\n", chip_id);
 		return -ENODEV;
 	}
