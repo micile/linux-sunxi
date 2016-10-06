@@ -101,3 +101,11 @@
 		status = "okay";
 	};
 };
+
+&codec {
+		status = "okay";
+};
+
+&dai {
+		status = "okay";
+};
