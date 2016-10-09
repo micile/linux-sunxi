@@ -145,7 +145,6 @@
         };
 };
 
-
 &codec {
 	pinctrl-names = "default";
 	pinctrl-0 = <&codec_pa_pin>;
