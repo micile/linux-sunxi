@@ -59,6 +59,11 @@
 		pinctrl-0 = <&wifi_pwrseq_pin_q8>;
 		post-power-on-delay-ms = <200>;
 	};
+
+};
+
+&backlight {
+	pwms = <&pwm 0 50000 0>;
 };
 
 &ehci0 {
@@ -145,9 +150,52 @@
         };
 };
 
-&codec {
-	pinctrl-names = "default";
-	pinctrl-0 = <&codec_pa_pin>;
-	allwinner,pa-gpios = <&pio 7 9 GPIO_ACTIVE_HIGH>; /* PH9 */
+/*
+&reg_ldo_io1 {
+	regulator-always-on;
+	regulator-min-microvolt = <3300000>;
+	regulator-max-microvolt = <3300000>;
+	regulator-name = "mic-ldo_io1";
 	status = "okay";
 };
+
+&reg_ldo_io0 {
+	regulator-always-on;
+	regulator-min-microvolt = <2800000>;
+	regulator-max-microvolt = <2800000>;
+	regulator-name = "mic-ldo_io0";
+	status = "okay";
+};
+
+
+&reg_eldo3 {
+	regulator-always-on;
+	regulator-min-microvolt = <2800000>;
+	regulator-max-microvolt = <2800000>;
+	regulator-name = "mic-eldo3";
+};
+
+
+
+&reg_eldo2 {
+	regulator-always-on;
+	regulator-min-microvolt = <1800000>;
+	regulator-max-microvolt = <1800000>;
+	regulator-name = "mic-eldo2";
+};
+
+
+&reg_dldo3 {
+	regulator-always-on;
+	regulator-min-microvolt = <2800000>;
+	regulator-max-microvolt = <2800000>;
+	regulator-name = "mic-dldo3";
+};
+
+&reg_dldo2 {
+	regulator-always-on;
+	regulator-min-microvolt = <3300000>;
+	regulator-max-microvolt = <300000>;
+	regulator-name = "mic-dldo2";
+};
+*/
