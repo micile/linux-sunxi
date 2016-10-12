@@ -73,9 +73,9 @@
 &touchscreen {
 	reg = <0x40>;
 	compatible = "silead,gsl3675";
-	firmware-name = "gsl3675-ga10h.fw";
-	touchscreen-size-x = <1630>;
-	touchscreen-size-y = <990>;
+	firmware-name = "silead-micile-A33G7.fw";
+	touchscreen-size-x = <1970>;
+	touchscreen-size-y = <1500>;
 	touchscreen-inverted-y;
 	status = "okay";
 };
@@ -150,7 +150,7 @@
         };
 };
 
-/*
+/* Touchscreen */
 &reg_ldo_io1 {
 	regulator-always-on;
 	regulator-min-microvolt = <3300000>;
@@ -158,7 +158,7 @@
 	regulator-name = "mic-ldo_io1";
 	status = "okay";
 };
-
+/*
 &reg_ldo_io0 {
 	regulator-always-on;
 	regulator-min-microvolt = <2800000>;
