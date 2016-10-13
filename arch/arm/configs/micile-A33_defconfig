@@ -2935,9 +2935,10 @@ CONFIG_BMC150_ACCEL_SPI=y
 # CONFIG_MMA9551 is not set
 # CONFIG_MMA9553 is not set
 # CONFIG_MXC4005 is not set
-CONFIG_MXC6255=y
+# CONFIG_MXC6255 is not set
 # CONFIG_STK8312 is not set
 # CONFIG_STK8BA50 is not set
+CONFIG_MXC622X=y
 
 #
 # Analog to digital converters

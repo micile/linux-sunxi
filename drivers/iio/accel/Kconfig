@@ -210,6 +210,16 @@ config MXC4005
 	  To compile this driver as a module, choose M. The module will be
 	  called mxc4005.
 
+config MXC622X
+	tristate "Memsic MXC622X 2-Axis Accelerometer Driver"
+	depends on I2C
+	help
+	  Say Y here if you want to build a driver for the Memsic MXC622X
+	  biaxial acceleration sensor.
+
+	  To compile this driver as a module, choose M here: the
+	  module will be called mxc622x.
+
 config MXC6255
 	tristate "Memsic MXC6255 Orientation Sensing Accelerometer Driver"
 	depends on I2C

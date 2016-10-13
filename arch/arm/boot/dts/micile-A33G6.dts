@@ -97,7 +97,7 @@
 &i2c1 {
 	accel: accel@0 {
 		reg = <0x15>;
-		compatible = "memsic,mxc6255";
+		compatible = "memsic,mxc622x";
 		status = "okay";
 	};
 };
