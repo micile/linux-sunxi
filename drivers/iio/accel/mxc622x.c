@@ -56,7 +56,7 @@ static int mxc622x_read_raw(struct iio_dev *indio_dev,
  		ret = i2c_smbus_read_byte_data(data->client, chan->scan_index);
  		if (ret < 0)
  			return ret;
- 		*val = -(s8)ret;
+ 		*val = (s8)ret;
 		return IIO_VAL_INT;
 	default:
 		return -EINVAL;
