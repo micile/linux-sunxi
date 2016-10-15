@@ -47,6 +47,15 @@
 / {
 	model = "Q8 A33 Tablet";
 	compatible = "allwinner,q8-a33", "allwinner,sun8i-a33";
+
+       aliases {
+               /delete-property/serial0;
+               serial1 = &uart1;
+       };
+
+       chosen {
+               /delete-property/stdout-path;
+       };
 };
 
 &i2c1 {
@@ -64,4 +73,15 @@
 	touchscreen-size-x = <948>;
 	touchscreen-size-y = <623>;
 	status = "okay";
+};
+
+&r_uart {
+       status = "disabled";
+};
+
+&uart1 {
+       pinctrl-names = "default";
+       pinctrl-0 = <&uart1_pins_a>,
+                   <&uart1_pins_cts_rts_a>;
+       status = "okay";
 };
