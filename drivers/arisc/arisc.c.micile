@@ -1,0 +1,369 @@
+#define ARISC_DEBUG_ON
+
+#include "arisc_i.h"
+
+/* local functions */
+static int     arisc_wait_ready(unsigned int timeout);
+
+/* external vars */
+extern char *arisc_binary_start;
+extern char *arisc_binary_end;
+
+unsigned long arisc_sram_a2_vbase = (unsigned long)IO_ADDRESS(SUNXI_SRAM_A2_PBASE);
+unsigned int arisc_debug_dram_crc_en = 0;
+unsigned int arisc_debug_dram_crc_srcaddr = 0x40000000;
+unsigned int arisc_debug_dram_crc_len = (1024 * 1024);
+unsigned int arisc_debug_dram_crc_error = 0;
+unsigned int arisc_debug_dram_crc_total_count = 0;
+unsigned int arisc_debug_dram_crc_error_count = 0;
+unsigned int arisc_debug_level = 0;
+static unsigned char arisc_version[40] = "arisc defualt version";
+static atomic_t arisc_suspend_flag;
+/* for save power check configuration */
+struct standby_info_para arisc_powchk_back;
+
+
+int arisc_suspend_flag_query(void)
+{
+	return atomic_read(&arisc_suspend_flag);
+}
+
+static void sunxi_arisc_shutdown(struct platform_device *dev)
+{
+	atomic_set(&arisc_suspend_flag, 1);
+	while (arisc_semaphore_used_num_query()) {
+			msleep(1);
+	}
+}
+
+
+static int arisc_wait_ready(unsigned int timeout)
+{
+	unsigned long          expire;
+#ifdef CONFIG_SUNXI_MODULE
+	struct sunxi_module_info arisc_module_info;
+#endif
+
+	expire = msecs_to_jiffies(timeout) + jiffies;
+
+	/* wait arisc startup ready */
+	while (1) {
+		/*
+		 * linux cpu interrupt is disable now,
+		 * we should query message by hand.
+		 */
+		struct arisc_message *pmessage = arisc_hwmsgbox_query_message();
+		if (pmessage == NULL) {
+			if (time_is_before_eq_jiffies(expire)) {
+				return -ETIMEDOUT;
+			}
+			/* try to query again */
+			continue;
+		}
+		/* query valid message */
+		if (pmessage->type == ARISC_STARTUP_NOTIFY) {
+			/* check arisc software and driver version match or not */
+			if (pmessage->paras[0] != ARISC_VERSIONS) {
+				ARISC_ERR("arisc firmware:%d and driver version:%d not matched\n", pmessage->paras[0], ARISC_VERSIONS);
+				return -EINVAL;
+			} else {
+				/* printf the main and sub version string */
+				memcpy((void *)arisc_version, (const void*)(&(pmessage->paras[1])), 40);
+				ARISC_LOG("arisc version: [%s]\n", arisc_version);
+#ifdef CONFIG_SUNXI_MODULE
+				strncpy((char *)arisc_module_info.module, (const char *)"arisc", 16);
+				strncpy((char *)arisc_module_info.version, (const char *)arisc_version, 16);
+				sunxi_module_info_register(&arisc_module_info);
+#endif
+			}
+
+			/* received arisc startup ready message */
+			ARISC_INF("arisc startup ready\n");
+			if ((pmessage->attr & ARISC_MESSAGE_ATTR_SOFTSYN) ||
+				(pmessage->attr & ARISC_MESSAGE_ATTR_HARDSYN)) {
+				/* synchronous message, just feedback it */
+				ARISC_INF("arisc startup notify message feedback\n");
+				pmessage->paras[0] = virt_to_phys((void *)&arisc_binary_start);
+				arisc_hwmsgbox_feedback_message(pmessage, ARISC_SEND_MSG_TIMEOUT);
+			} else {
+				/* asyn message, free message directly */
+				ARISC_INF("arisc startup notify message free directly\n");
+				arisc_message_free(pmessage);
+			}
+			break;
+		}
+		/*
+		 * invalid message detected, ignore it.
+		 * by sunny at 2012-7-6 18:34:38.
+		 */
+		ARISC_WRN("arisc startup waiting ignore message\n");
+		if ((pmessage->attr & ARISC_MESSAGE_ATTR_SOFTSYN) ||
+			(pmessage->attr & ARISC_MESSAGE_ATTR_HARDSYN)) {
+			/* synchronous message, just feedback it */
+			arisc_hwmsgbox_send_message(pmessage, ARISC_SEND_MSG_TIMEOUT);
+		} else {
+			/* asyn message, free message directly */
+			arisc_message_free(pmessage);
+		}
+		/* we need waiting continue */
+	}
+
+	return 0;
+}
+
+static int  sunxi_arisc_clk_cfg(struct platform_device *pdev)
+{
+	struct clk *pllddr0 = NULL;
+	struct clk *pllddr1 = NULL;
+	struct clk *pllperiph = NULL;
+	struct clk *hosc = NULL;
+	struct clk *losc = NULL;
+
+	ARISC_INF("device [%s] clk resource request enter\n", dev_name(&pdev->dev));
+
+	/* config PLL5 for dram clk */
+	pllddr0 = clk_get(NULL, PLL_DDR0_CLK);
+	if(!pllddr0 || IS_ERR(pllddr0)){
+		ARISC_ERR("try to get pll_ddr0 failed!\n");
+		return -EINVAL;
+	}
+
+	if(clk_prepare_enable(pllddr0)) {
+		ARISC_ERR("try to enable pll_ddr0 output failed!\n");
+		return -EINVAL;
+	}
+
+	pllddr1 = clk_get(NULL, PLL_DDR1_CLK);
+	if(!pllddr1 || IS_ERR(pllddr1)){
+		ARISC_ERR("try to get pll_ddr1 failed!\n");
+		return -EINVAL;
+	}
+
+	if(clk_prepare_enable(pllddr1)) {
+		ARISC_ERR("try to enable pll_ddr1 output failed!\n");
+		return -EINVAL;
+	}
+
+	/* config PLL6 for cpus clk */
+	pllperiph = clk_get(NULL, PLL_PERIPH_CLK);
+	if(!pllperiph || IS_ERR(pllperiph)){
+		ARISC_ERR("try to get pll_periph failed!\n");
+		return -EINVAL;
+	}
+
+	if(clk_prepare_enable(pllperiph)) {
+		ARISC_ERR("try to enable pll_periph output failed!\n");
+		return -EINVAL;
+	}
+
+	/* config HOSC for cpus clk */
+	hosc = clk_get(NULL, HOSC_CLK);
+	if(!hosc || IS_ERR(hosc)){
+		ARISC_ERR("try to get hosc failed!\n");
+		return -EINVAL;
+	}
+
+	if(clk_prepare_enable(hosc)) {
+		ARISC_ERR("try to enable hosc output failed!\n");
+		return -EINVAL;
+	}
+
+	/* config LOSC for cpus clk */
+	losc = clk_get(NULL, LOSC_CLK);
+	if(!losc || IS_ERR(losc)){
+		ARISC_ERR("try to get losc failed!\n");
+		return -EINVAL;
+	}
+
+	if(clk_prepare_enable(losc)) {
+		ARISC_ERR("try to enable losc output failed!\n");
+		return -EINVAL;
+	}
+
+	ARISC_INF("device [%s] clk resource request ok\n", dev_name(&pdev->dev));
+
+	return 0;
+}
+
+static void dump_clks() {
+	volatile unsigned long value;
+	
+	value = readl(IO_ADDRESS(0x01C20000) + 0x00);
+	early_printk("PLL_CPUX_CTRL_REG  = 0x%X\n", value);
+	value = readl(IO_ADDRESS(0x01C20000) + 0x08);
+	early_printk("PLL_AUDIO_CTRL_REG  = 0x%X\n", value);
+	value = readl(IO_ADDRESS(0x01C20000) + 0x10);
+	early_printk("PLL_VIDEO_CTRL_REG  = 0x%X\n", value);
+	value = readl(IO_ADDRESS(0x01C20000) + 0x18);
+	early_printk("PLL_VE_CTRL_REG     = 0x%X\n", value);
+	value = readl(IO_ADDRESS(0x01C20000) + 0x20);
+	early_printk("PLL_DDR0_CTRL_REG   = 0x%X\n", value);
+	value = readl(IO_ADDRESS(0x01C20000) + 0x28);
+	early_printk("PLL_PERIPH_CTRL_REG = 0x%X\n", value);
+	value = readl(IO_ADDRESS(0x01C20000) + 0x30);
+	early_printk("PLL_GPU_CTRL_REG    = 0x%X\n", value);
+	value = readl(IO_ADDRESS(0x01C20000) + 0x38);
+	early_printk("PLL_MIPI_CTRL_REG   = 0x%X\n", value);
+	value = readl(IO_ADDRESS(0x01C20000) + 0x40);
+	early_printk("PLL_HSIC_CTRL_REG   = 0x%X\n", value);
+	value = readl(IO_ADDRESS(0x01C20000) + 0x48);
+	early_printk("PLL_DE_CTRL_REG     = 0x%X\n", value);
+	value = readl(IO_ADDRESS(0x01C20000) + 0x4C);
+	early_printk("PLL_DDR1_CTRL_REG	  = 0x%X\n", value);
+	
+	
+}
+
+static int  sunxi_arisc_probe(struct platform_device *pdev)
+{
+	int binary_len;
+	int ret;
+
+	early_printk("arisc initialize\n");
+
+
+	dump_clks();
+
+	early_printk("---------\n");
+
+
+	/* cfg sunxi arisc clk */
+	ret = sunxi_arisc_clk_cfg(pdev);
+ 	if (ret) {
+ 		early_printk("sunxi-arisc clk cfg failed\n");
+ 		return -EINVAL;
+ 	}
+
+	dump_clks();
+
+	early_printk("sram_a2 vaddr(%x)\n", (unsigned int)arisc_sram_a2_vbase);
+
+	binary_len = 0x13000;
+	/* clear sram_a2 area */
+	memset((void *)arisc_sram_a2_vbase, 0, SUNXI_SRAM_A2_SIZE);
+	/* load arisc system binary data to sram_a2 */
+	memcpy((void *)arisc_sram_a2_vbase, (void *)(&arisc_binary_start), binary_len);
+	early_printk("move arisc binary data [addr = %x, len = %x] to sram_a2 finished\n",
+			 (unsigned int)(&arisc_binary_start), (unsigned int)binary_len);
+
+	/* initialize hwspinlock */
+	ARISC_INF("hwspinlock initialize\n");
+	arisc_hwspinlock_init();
+
+	/* initialize hwmsgbox */
+	ARISC_INF("hwmsgbox initialize\n");
+	arisc_hwmsgbox_init();
+
+	/* initialize message manager */
+	ARISC_INF("message manager initialize\n");
+	arisc_message_manager_init();
+
+	/* set arisc cpu reset to de-assert state */
+	ARISC_INF("set arisc reset to de-assert state\n");
+	{
+		volatile unsigned long value;
+		value = readl((IO_ADDRESS(SUNXI_R_CPUCFG_PBASE) + 0x0));
+		value &= ~1;
+		writel(value, (IO_ADDRESS(SUNXI_R_CPUCFG_PBASE) + 0x0));
+		value = readl((IO_ADDRESS(SUNXI_R_CPUCFG_PBASE) + 0x0));
+		value |= 1;
+		writel(value, (IO_ADDRESS(SUNXI_R_CPUCFG_PBASE) + 0x0));
+	}
+
+	/* wait arisc ready */
+	ARISC_INF("wait arisc ready....\n");
+	if (arisc_wait_ready(10000)) {
+		ARISC_LOG("arisc startup failed\n");
+	}
+
+printk("FREEZE YO MOMMA!\n");
+while (1) {
+	binary_len=binary_len + 1;
+}
+
+
+	/* enable arisc asyn tx interrupt */
+	arisc_hwmsgbox_enable_receiver_int(ARISC_HWMSGBOX_ARISC_ASYN_TX_CH, AW_HWMSG_QUEUE_USER_AC327);
+
+	/* enable arisc syn tx interrupt */
+	arisc_hwmsgbox_enable_receiver_int(ARISC_HWMSGBOX_ARISC_SYN_TX_CH, AW_HWMSG_QUEUE_USER_AC327);
+
+	/*
+	 * detect sunxi chip id
+	 * include soc chip id, pmu chip id and serial.
+	 */
+	sunxi_chip_id_init();
+
+	/* arisc initialize succeeded */
+	ARISC_LOG("sunxi-arisc driver v%s startup succeeded\n", DRV_VERSION);
+
+
+	return 0;
+}
+
+/* msgbox irq no */
+static struct resource sunxi_arisc_resource[] = {
+	[0] = {
+		.start = SUNXI_IRQ_MBOX,
+		.end   = SUNXI_IRQ_MBOX,
+		.flags = IORESOURCE_IRQ,
+	},
+};
+
+static struct platform_device sunxi_arisc_device = {
+	.name           = DEV_NAME,
+	.id             = PLATFORM_DEVID_NONE,
+	.num_resources  = ARRAY_SIZE(sunxi_arisc_resource),
+	.resource       = sunxi_arisc_resource,
+};
+
+static struct platform_driver sunxi_arisc_driver = {
+	.probe      = sunxi_arisc_probe,
+	.shutdown   = sunxi_arisc_shutdown,
+	.driver     = {
+		.name     = DRV_NAME,
+		.owner    = THIS_MODULE,
+	},
+};
+
+static int __init arisc_init(void)
+{
+	int ret;
+
+	ARISC_LOG("sunxi-arisc driver v%s\n", DRV_VERSION);
+
+	ret = platform_driver_register(&sunxi_arisc_driver);
+	if (IS_ERR_VALUE(ret)) {
+		ARISC_ERR("register sunxi arisc platform driver failed\n");
+		goto err_platform_driver_register;
+	}
+	ret = platform_device_register(&sunxi_arisc_device);
+	if (IS_ERR_VALUE(ret)) {
+		ARISC_ERR("register sunxi arisc platform device failed\n");
+		goto err_platform_device_register;
+	}
+
+	return 0;
+
+err_platform_device_register:
+	platform_device_unregister(&sunxi_arisc_device);
+err_platform_driver_register:
+	platform_driver_unregister(&sunxi_arisc_driver);
+	return -EINVAL;
+}
+
+static void __exit arisc_exit(void)
+{
+	platform_device_unregister(&sunxi_arisc_device);
+	platform_driver_unregister(&sunxi_arisc_driver);
+	ARISC_LOG("module unloaded\n");
+}
+
+subsys_initcall(arisc_init);
+module_exit(arisc_exit);
+
+MODULE_DESCRIPTION("SUNXI ARISC Driver");
+MODULE_AUTHOR("Superm Wu <superm@allwinnertech.com>");
+MODULE_LICENSE("GPL");
+MODULE_VERSION(DRV_VERSION);
+MODULE_ALIAS("platform:sunxi arisc driver");
