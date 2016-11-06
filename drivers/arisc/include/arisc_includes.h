@@ -23,6 +23,24 @@
 #ifndef __ARISC_INCLUDES_H
 #define __ARISC_INCLUDES_H
 
+#define CONFIG_ARCH_SUN8IW5P1
+
+#define IO_ADDRESS(x)                    IOMEM((x) + 0xf0000000)
+#define SUNXI_SRAM_A2_PBASE              0x00040000
+#define SUNXI_SRAM_A2_VBASE              IO_ADDRESS(SUNXI_SRAM_A2_PBASE      )
+#define PLL_DDR0_CLK                     "pll-ddr0"
+#define PLL_DDR1_CLK                     "pll_ddr1"
+#define PLL_PERIPH_CLK                   "pll_periph"
+#define HOSC_CLK                         "hosc"
+#define LOSC_CLK                         "losc"
+#define SUNXI_SRAM_A2_SIZE               0x00014000
+#define SUNXI_R_CPUCFG_PBASE             0x01f01c00
+#define SUNXI_GIC_START                  32
+#define SUNXI_IRQ_MBOX                   (SUNXI_GIC_START + 49)  /* 81 */
+#define SUNXI_MSGBOX_PBASE               0x01c17000
+#define SUNXI_SPINLOCK_PBASE             0x01c18000
+#define SUNXI_SRAMCTRL_PBASE             0x01c00000
+
 #include <linux/kernel.h>
 #include <linux/module.h>
 #include <linux/string.h>
@@ -36,9 +54,9 @@
 #include <linux/delay.h>
 #include <linux/arisc/hwmsgbox.h>
 #include <linux/arisc/hwspinlock.h>
-#include <mach/irqs.h>
-#include <mach/hardware.h>
-#include <mach/platform.h>
+//#include <mach/irqs.h>
+//#include <mach/hardware.h>
+//#include <mach/platform.h>
 
 /* configure and debugger */
 #include "./../arisc_i.h"

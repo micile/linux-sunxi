@@ -30,17 +30,17 @@
 #include <linux/device.h>
 #include <linux/gpio.h>
 #include <linux/pinctrl/consumer.h>
-#include <linux/pinctrl/pinconf-sunxi.h>
+//#include <linux/pinctrl/pinconf-sunxi.h>
 #include <linux/module.h>
 #include <linux/platform_device.h>
-#include <linux/clk/sunxi_name.h>
+//#include <linux/clk/sunxi_name.h>
 #include <linux/delay.h>
 #include <linux/clk.h>
 #include <linux/arisc/arisc-notifier.h>
-#include <linux/sunxi_module.h>
-#include <mach/gpio.h>
-#include <mach/sys_config.h>
-#include <mach/sunxi-chip.h>
+//#include <linux/sunxi_module.h>
+//#include <mach/gpio.h>
+//#include <mach/sys_config.h>
+//#include <mach/sunxi-chip.h>
 
 #define DRV_NAME    "sunxi-arisc"
 #define DEV_NAME    "sunxi-arisc"

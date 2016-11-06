@@ -1075,149 +1075,149 @@ static int  sunxi_arisc_clk_cfg(struct platform_device *pdev)
 
 static int  sunxi_arisc_pin_cfg(struct platform_device *pdev)
 {
-	script_item_u script_val;
-	script_item_value_type_e type;
-	script_item_u  *pin_list;
-	int            pin_count = 0;
-	int            pin_index = 0;
-	struct gpio_config    *pin_cfg;
-	char          pin_name[SUNXI_PIN_NAME_MAX_LEN];
-	unsigned long      config;
-
-	ARISC_INF("device [%s] pin resource request enter\n", dev_name(&pdev->dev));
-	/*
-	 * request arisc resources:
-	 * p2wi/rsb gpio...
-	 */
-	/* get pin sys_config info */
-#if defined CONFIG_ARCH_SUN8IW1P1
-	pin_count = script_get_pio_list ("s_p2twi0", &pin_list);
-#elif (defined CONFIG_ARCH_SUN8IW3P1) || (defined CONFIG_ARCH_SUN8IW5P1) || (defined CONFIG_ARCH_SUN8IW6P1)
-	pin_count = script_get_pio_list ("s_rsb0", &pin_list);
-#elif defined CONFIG_ARCH_SUN9IW1P1
-	pin_count = script_get_pio_list ("s_rsb0", &pin_list);
-#else
-#error "please select a platform\n"
-#endif
-
-	if (pin_count == 0) {
-		/* "s_p2twi0" or "s_rsb0" have no pin configuration */
-		ARISC_WRN("arisc s_p2twi0/s_rsb0 have no pin configuration\n");
-		return -EINVAL;
-	}
-
-	/* request pin individually */
-	for (pin_index = 0; pin_index < pin_count; pin_index++) {
-		pin_cfg = &(pin_list[pin_index].gpio);
-
-		/* valid pin of sunxi-pinctrl, config pin attributes individually.*/
-		sunxi_gpio_to_name(pin_cfg->gpio, pin_name);
-		config = SUNXI_PINCFG_PACK(SUNXI_PINCFG_TYPE_FUNC, pin_cfg->mul_sel);
-		pin_config_set(SUNXI_PINCTRL, pin_name, config);
-		if (pin_cfg->pull != GPIO_PULL_DEFAULT) {
-			config = SUNXI_PINCFG_PACK(SUNXI_PINCFG_TYPE_PUD, pin_cfg->pull);
-		pin_config_set (SUNXI_PINCTRL, pin_name, config);
-		}
-		if (pin_cfg->drv_level != GPIO_DRVLVL_DEFAULT) {
-		config = SUNXI_PINCFG_PACK(SUNXI_PINCFG_TYPE_DRV, pin_cfg->drv_level);
-		pin_config_set (SUNXI_PINCTRL, pin_name, config);
-		}
-		if (pin_cfg->data != GPIO_DATA_DEFAULT) {
-			config = SUNXI_PINCFG_PACK(SUNXI_PINCFG_TYPE_DAT, pin_cfg->data);
-			pin_config_set (SUNXI_PINCTRL, pin_name, config);
-		}
-
-	}
-
-	/*
-	 * request arisc resources:
-	 * uart gpio...
-	 */
-	type = script_get_item("s_uart0", "s_uart_used", &script_val);
-	if (SCIRPT_ITEM_VALUE_TYPE_INT != type) {
-		ARISC_WRN("sys_config.fex have no arisc s_uart0 config!");
-		script_val.val = 0;
-	}
-	if (script_val.val) {
-		pin_count = script_get_pio_list ("s_uart0", &pin_list);
-		if (pin_count == 0) {
-			/* "s_uart0" have no pin configuration */
-			ARISC_WRN("arisc s_uart0 have no pin configuration\n");
-			return -EINVAL;
-		}
-
-		/* request pin individually */
-		for (pin_index = 0; pin_index < pin_count; pin_index++) {
-			pin_cfg = &(pin_list[pin_index].gpio);
-
-			/* valid pin of sunxi-pinctrl, config pin attributes individually.*/
-			sunxi_gpio_to_name(pin_cfg->gpio, pin_name);
-			config = SUNXI_PINCFG_PACK(SUNXI_PINCFG_TYPE_FUNC, pin_cfg->mul_sel);
-			pin_config_set(SUNXI_PINCTRL, pin_name, config);
-			if (pin_cfg->pull != GPIO_PULL_DEFAULT) {
-				config = SUNXI_PINCFG_PACK(SUNXI_PINCFG_TYPE_PUD, pin_cfg->pull);
-			pin_config_set (SUNXI_PINCTRL, pin_name, config);
-			}
-			if (pin_cfg->drv_level != GPIO_DRVLVL_DEFAULT) {
-			config = SUNXI_PINCFG_PACK(SUNXI_PINCFG_TYPE_DRV, pin_cfg->drv_level);
-			pin_config_set (SUNXI_PINCTRL, pin_name, config);
-			}
-			if (pin_cfg->data != GPIO_DATA_DEFAULT) {
-				config = SUNXI_PINCFG_PACK(SUNXI_PINCFG_TYPE_DAT, pin_cfg->data);
-				pin_config_set (SUNXI_PINCTRL, pin_name, config);
-			}
-
-		}
-
-
-	}
-	ARISC_INF("arisc uart debug config [%s] [%s] : %d\n", "s_uart0", "s_uart_used", script_val.val);
-
-	/*
-	 * request arisc resources:
-	 * jtag gpio...
-	 */
-	type = script_get_item("s_jtag0", "s_jtag_used", &script_val);
-	if (SCIRPT_ITEM_VALUE_TYPE_INT != type) {
-		ARISC_WRN("sys_config.fex have no arisc s_jtag0 config!");
-		script_val.val = 0;
-	}
-	if (script_val.val) {
-		pin_count = script_get_pio_list ("s_jtag0", &pin_list);
-		if (pin_count == 0) {
-			/* "s_jtag0" have no pin configuration */
-			ARISC_WRN("arisc s_jtag0 have no pin configuration\n");
-			return -EINVAL;
-		}
-
-		/* request pin individually */
-		for (pin_index = 0; pin_index < pin_count; pin_index++) {
-			pin_cfg = &(pin_list[pin_index].gpio);
-
-			/* valid pin of sunxi-pinctrl, config pin attributes individually.*/
-			sunxi_gpio_to_name(pin_cfg->gpio, pin_name);
-			config = SUNXI_PINCFG_PACK(SUNXI_PINCFG_TYPE_FUNC, pin_cfg->mul_sel);
-			pin_config_set(SUNXI_PINCTRL, pin_name, config);
-			if (pin_cfg->pull != GPIO_PULL_DEFAULT) {
-				config = SUNXI_PINCFG_PACK(SUNXI_PINCFG_TYPE_PUD, pin_cfg->pull);
-			pin_config_set (SUNXI_PINCTRL, pin_name, config);
-			}
-			if (pin_cfg->drv_level != GPIO_DRVLVL_DEFAULT) {
-			config = SUNXI_PINCFG_PACK(SUNXI_PINCFG_TYPE_DRV, pin_cfg->drv_level);
-			pin_config_set (SUNXI_PINCTRL, pin_name, config);
-			}
-			if (pin_cfg->data != GPIO_DATA_DEFAULT) {
-				config = SUNXI_PINCFG_PACK(SUNXI_PINCFG_TYPE_DAT, pin_cfg->data);
-				pin_config_set (SUNXI_PINCTRL, pin_name, config);
-			}
-
-		}
-
-
-	}
-	ARISC_INF("arisc jtag debug config [%s] [%s] : %d\n", "s_jtag0", "s_jtag_used", script_val.val);
-
-	ARISC_INF("device [%s] pin resource request ok\n", dev_name(&pdev->dev));
+// 	script_item_u script_val;
+// 	script_item_value_type_e type;
+// 	script_item_u  *pin_list;
+// 	int            pin_count = 0;
+// 	int            pin_index = 0;
+// 	struct gpio_config    *pin_cfg;
+// 	char          pin_name[SUNXI_PIN_NAME_MAX_LEN];
+// 	unsigned long      config;
+// 
+// 	ARISC_INF("device [%s] pin resource request enter\n", dev_name(&pdev->dev));
+// 	/*
+// 	 * request arisc resources:
+// 	 * p2wi/rsb gpio...
+// 	 */
+// 	/* get pin sys_config info */
+// #if defined CONFIG_ARCH_SUN8IW1P1
+// 	pin_count = script_get_pio_list ("s_p2twi0", &pin_list);
+// #elif (defined CONFIG_ARCH_SUN8IW3P1) || (defined CONFIG_ARCH_SUN8IW5P1) || (defined CONFIG_ARCH_SUN8IW6P1)
+// 	pin_count = script_get_pio_list ("s_rsb0", &pin_list);
+// #elif defined CONFIG_ARCH_SUN9IW1P1
+// 	pin_count = script_get_pio_list ("s_rsb0", &pin_list);
+// #else
+// #error "please select a platform\n"
+// #endif
+// 
+// 	if (pin_count == 0) {
+// 		/* "s_p2twi0" or "s_rsb0" have no pin configuration */
+// 		ARISC_WRN("arisc s_p2twi0/s_rsb0 have no pin configuration\n");
+// 		return -EINVAL;
+// 	}
+// 
+// 	/* request pin individually */
+// 	for (pin_index = 0; pin_index < pin_count; pin_index++) {
+// 		pin_cfg = &(pin_list[pin_index].gpio);
+// 
+// 		/* valid pin of sunxi-pinctrl, config pin attributes individually.*/
+// 		sunxi_gpio_to_name(pin_cfg->gpio, pin_name);
+// 		config = SUNXI_PINCFG_PACK(SUNXI_PINCFG_TYPE_FUNC, pin_cfg->mul_sel);
+// 		pin_config_set(SUNXI_PINCTRL, pin_name, config);
+// 		if (pin_cfg->pull != GPIO_PULL_DEFAULT) {
+// 			config = SUNXI_PINCFG_PACK(SUNXI_PINCFG_TYPE_PUD, pin_cfg->pull);
+// 		pin_config_set (SUNXI_PINCTRL, pin_name, config);
+// 		}
+// 		if (pin_cfg->drv_level != GPIO_DRVLVL_DEFAULT) {
+// 		config = SUNXI_PINCFG_PACK(SUNXI_PINCFG_TYPE_DRV, pin_cfg->drv_level);
+// 		pin_config_set (SUNXI_PINCTRL, pin_name, config);
+// 		}
+// 		if (pin_cfg->data != GPIO_DATA_DEFAULT) {
+// 			config = SUNXI_PINCFG_PACK(SUNXI_PINCFG_TYPE_DAT, pin_cfg->data);
+// 			pin_config_set (SUNXI_PINCTRL, pin_name, config);
+// 		}
+// 
+// 	}
+// 
+// 	/*
+// 	 * request arisc resources:
+// 	 * uart gpio...
+// 	 */
+// 	type = script_get_item("s_uart0", "s_uart_used", &script_val);
+// 	if (SCIRPT_ITEM_VALUE_TYPE_INT != type) {
+// 		ARISC_WRN("sys_config.fex have no arisc s_uart0 config!");
+// 		script_val.val = 0;
+// 	}
+// 	if (script_val.val) {
+// 		pin_count = script_get_pio_list ("s_uart0", &pin_list);
+// 		if (pin_count == 0) {
+// 			/* "s_uart0" have no pin configuration */
+// 			ARISC_WRN("arisc s_uart0 have no pin configuration\n");
+// 			return -EINVAL;
+// 		}
+// 
+// 		/* request pin individually */
+// 		for (pin_index = 0; pin_index < pin_count; pin_index++) {
+// 			pin_cfg = &(pin_list[pin_index].gpio);
+// 
+// 			/* valid pin of sunxi-pinctrl, config pin attributes individually.*/
+// 			sunxi_gpio_to_name(pin_cfg->gpio, pin_name);
+// 			config = SUNXI_PINCFG_PACK(SUNXI_PINCFG_TYPE_FUNC, pin_cfg->mul_sel);
+// 			pin_config_set(SUNXI_PINCTRL, pin_name, config);
+// 			if (pin_cfg->pull != GPIO_PULL_DEFAULT) {
+// 				config = SUNXI_PINCFG_PACK(SUNXI_PINCFG_TYPE_PUD, pin_cfg->pull);
+// 			pin_config_set (SUNXI_PINCTRL, pin_name, config);
+// 			}
+// 			if (pin_cfg->drv_level != GPIO_DRVLVL_DEFAULT) {
+// 			config = SUNXI_PINCFG_PACK(SUNXI_PINCFG_TYPE_DRV, pin_cfg->drv_level);
+// 			pin_config_set (SUNXI_PINCTRL, pin_name, config);
+// 			}
+// 			if (pin_cfg->data != GPIO_DATA_DEFAULT) {
+// 				config = SUNXI_PINCFG_PACK(SUNXI_PINCFG_TYPE_DAT, pin_cfg->data);
+// 				pin_config_set (SUNXI_PINCTRL, pin_name, config);
+// 			}
+// 
+// 		}
+// 
+// 
+// 	}
+// 	ARISC_INF("arisc uart debug config [%s] [%s] : %d\n", "s_uart0", "s_uart_used", script_val.val);
+// 
+// 	/*
+// 	 * request arisc resources:
+// 	 * jtag gpio...
+// 	 */
+// 	type = script_get_item("s_jtag0", "s_jtag_used", &script_val);
+// 	if (SCIRPT_ITEM_VALUE_TYPE_INT != type) {
+// 		ARISC_WRN("sys_config.fex have no arisc s_jtag0 config!");
+// 		script_val.val = 0;
+// 	}
+// 	if (script_val.val) {
+// 		pin_count = script_get_pio_list ("s_jtag0", &pin_list);
+// 		if (pin_count == 0) {
+// 			/* "s_jtag0" have no pin configuration */
+// 			ARISC_WRN("arisc s_jtag0 have no pin configuration\n");
+// 			return -EINVAL;
+// 		}
+// 
+// 		/* request pin individually */
+// 		for (pin_index = 0; pin_index < pin_count; pin_index++) {
+// 			pin_cfg = &(pin_list[pin_index].gpio);
+// 
+// 			/* valid pin of sunxi-pinctrl, config pin attributes individually.*/
+// 			sunxi_gpio_to_name(pin_cfg->gpio, pin_name);
+// 			config = SUNXI_PINCFG_PACK(SUNXI_PINCFG_TYPE_FUNC, pin_cfg->mul_sel);
+// 			pin_config_set(SUNXI_PINCTRL, pin_name, config);
+// 			if (pin_cfg->pull != GPIO_PULL_DEFAULT) {
+// 				config = SUNXI_PINCFG_PACK(SUNXI_PINCFG_TYPE_PUD, pin_cfg->pull);
+// 			pin_config_set (SUNXI_PINCTRL, pin_name, config);
+// 			}
+// 			if (pin_cfg->drv_level != GPIO_DRVLVL_DEFAULT) {
+// 			config = SUNXI_PINCFG_PACK(SUNXI_PINCFG_TYPE_DRV, pin_cfg->drv_level);
+// 			pin_config_set (SUNXI_PINCTRL, pin_name, config);
+// 			}
+// 			if (pin_cfg->data != GPIO_DATA_DEFAULT) {
+// 				config = SUNXI_PINCFG_PACK(SUNXI_PINCFG_TYPE_DAT, pin_cfg->data);
+// 				pin_config_set (SUNXI_PINCTRL, pin_name, config);
+// 			}
+// 
+// 		}
+// 
+// 
+// 	}
+// 	ARISC_INF("arisc jtag debug config [%s] [%s] : %d\n", "s_jtag0", "s_jtag_used", script_val.val);
+// 
+// 	ARISC_INF("device [%s] pin resource request ok\n", dev_name(&pdev->dev));
 
 	return 0;
 }
@@ -1346,7 +1346,7 @@ binary_len++;
 	 * detect sunxi chip id
 	 * include soc chip id, pmu chip id and serial.
 	 */
-	sunxi_chip_id_init();
+//	sunxi_chip_id_init();
 
 	/* arisc initialize succeeded */
 	ARISC_LOG("sunxi-arisc driver v%s startup succeeded\n", DRV_VERSION);

@@ -21,7 +21,7 @@
  */
 
 #include "../arisc_i.h"
-#include <mach/sys_config.h>
+//#include <mach/sys_config.h>
 
 typedef struct arisc_freq_voltage
 {
@@ -99,15 +99,15 @@ static struct arisc_freq_voltage arisc_vf_table[2][ARISC_DVFS_VF_TABLE_MAX] =
 
 static int arisc_dvfs_get_cfg(char *main, char *sub, u32 *val)
 {
-	script_item_u script_val;
-	script_item_value_type_e type;
-	type = script_get_item(main, sub, &script_val);
-	if (SCIRPT_ITEM_VALUE_TYPE_INT != type) {
-		ARISC_ERR("arisc dvfs config type err!");
-		return -EINVAL;
-	}
-	*val = script_val.val;
-	ARISC_INF("arisc dvfs config [%s] [%s] : %d\n", main, sub, *val);
+// 	script_item_u script_val;
+// 	script_item_value_type_e type;
+// 	type = script_get_item(main, sub, &script_val);
+// 	if (SCIRPT_ITEM_VALUE_TYPE_INT != type) {
+// 		ARISC_ERR("arisc dvfs config type err!");
+// 		return -EINVAL;
+// 	}
+// 	*val = script_val.val;
+// 	ARISC_INF("arisc dvfs config [%s] [%s] : %d\n", main, sub, *val);
 	return 0;
 }
 

@@ -1,6 +1,7 @@
 #
 # Makefile for the linux kernel.
 #
+
 ifdef CONFIG_ARCH_SUN8IW1P1
 PLATFORM=arisc_sun8iw1p1
 endif
@@ -9,9 +10,9 @@ ifdef CONFIG_ARCH_SUN8IW3P1
 PLATFORM=arisc_sun8iw3p1
 endif
 
-ifdef CONFIG_ARCH_SUN8IW5P1
+#ifdef CONFIG_ARCH_SUN8IW5P1
 PLATFORM=arisc_sun8iw5p1
-endif
+#endif
 
 ifdef CONFIG_ARCH_SUN8IW6P1
 PLATFORM=arisc_sun8iw6p1

@@ -23,7 +23,7 @@
 #include "../arisc_i.h"
 #include <asm/tlbflush.h>
 #include <asm/cacheflush.h>
-#include <mach/sys_config.h>
+//#include <mach/sys_config.h>
 
 /* record super-standby wakeup event */
 static unsigned long wakeup_event = 0;
@@ -370,15 +370,15 @@ EXPORT_SYMBOL(arisc_fake_power_off);
 
 static int arisc_get_ir_cfg(char *main, char *sub, u32 *val)
 {
-	script_item_u script_val;
-	script_item_value_type_e type;
-	type = script_get_item(main, sub, &script_val);
-	if (SCIRPT_ITEM_VALUE_TYPE_INT != type) {
-		ARISC_ERR("arisc ir power key code config type err!");
-		return -EINVAL;
-	}
-	*val = script_val.val;
-	ARISC_INF("arisc ir power key code config [%s] [%s] : %d\n", main, sub, *val);
+// 	script_item_u script_val;
+// 	script_item_value_type_e type;
+// 	type = script_get_item(main, sub, &script_val);
+// 	if (SCIRPT_ITEM_VALUE_TYPE_INT != type) {
+// 		ARISC_ERR("arisc ir power key code config type err!");
+// 		return -EINVAL;
+// 	}
+// 	*val = script_val.val;
+// 	ARISC_INF("arisc ir power key code config [%s] [%s] : %d\n", main, sub, *val);
 	return 0;
 }
 
@@ -435,15 +435,15 @@ int arisc_config_ir_paras(void)
 
 static int arisc_get_pmu_cfg(char *main, char *sub, u32 *val)
 {
-	script_item_u script_val;
-	script_item_value_type_e type;
-	type = script_get_item(main, sub, &script_val);
-	if (SCIRPT_ITEM_VALUE_TYPE_INT != type) {
-		ARISC_ERR("arisc pmu paras config type err!");
-		return -EINVAL;
-	}
-	*val = script_val.val;
-	ARISC_INF("arisc pmu paras config [%s] [%s] : %d\n", main, sub, *val);
+// 	script_item_u script_val;
+// 	script_item_value_type_e type;
+// 	type = script_get_item(main, sub, &script_val);
+// 	if (SCIRPT_ITEM_VALUE_TYPE_INT != type) {
+// 		ARISC_ERR("arisc pmu paras config type err!");
+// 		return -EINVAL;
+// 	}
+// 	*val = script_val.val;
+// 	ARISC_INF("arisc pmu paras config [%s] [%s] : %d\n", main, sub, *val);
 	return 0;
 }
 
@@ -498,36 +498,36 @@ int arisc_config_pmu_paras(void)
 }
 int arisc_sysconfig_sstpower_paras(void)
 {
-	script_item_u val;
-	script_item_value_type_e type;
-
-	type = script_get_item("s_powchk", "s_powchk_used", &val);
-	if(SCIRPT_ITEM_VALUE_TYPE_INT != type)
-	{
-		ARISC_ERR("sst power para type err %d!", __LINE__);
-		return -EINVAL;
-	}
-	ARISC_INF("powerchk_used is %u\n", val.val);
-	arisc_powchk_back.power_state.enable = val.val;
-
-	type = script_get_item("s_powchk", "s_power_reg", &val);
-	if(SCIRPT_ITEM_VALUE_TYPE_INT != type)
-	{
-		ARISC_ERR("sst power para type err %d!", __LINE__);
-		return -EINVAL;
-	}
-	ARISC_INF("power_regs is %#x\n", val.val);
-	arisc_powchk_back.power_state.power_reg = val.val;
-
-	type = script_get_item("s_powchk", "s_system_power", &val);
-	if(SCIRPT_ITEM_VALUE_TYPE_INT != type)
-	{
-		ARISC_ERR("sst power para type err %d!", __LINE__);
-		return -EINVAL;
-	}
-	ARISC_INF("system_power is %#x\n", val.val);
-	arisc_powchk_back.power_state.system_power = val.val;
-	arisc_set_standby_power_cfg(&arisc_powchk_back);
+// 	script_item_u val;
+// 	script_item_value_type_e type;
+// 
+// 	type = script_get_item("s_powchk", "s_powchk_used", &val);
+// 	if(SCIRPT_ITEM_VALUE_TYPE_INT != type)
+// 	{
+// 		ARISC_ERR("sst power para type err %d!", __LINE__);
+// 		return -EINVAL;
+// 	}
+// 	ARISC_INF("powerchk_used is %u\n", val.val);
+// 	arisc_powchk_back.power_state.enable = val.val;
+// 
+// 	type = script_get_item("s_powchk", "s_power_reg", &val);
+// 	if(SCIRPT_ITEM_VALUE_TYPE_INT != type)
+// 	{
+// 		ARISC_ERR("sst power para type err %d!", __LINE__);
+// 		return -EINVAL;
+// 	}
+// 	ARISC_INF("power_regs is %#x\n", val.val);
+// 	arisc_powchk_back.power_state.power_reg = val.val;
+// 
+// 	type = script_get_item("s_powchk", "s_system_power", &val);
+// 	if(SCIRPT_ITEM_VALUE_TYPE_INT != type)
+// 	{
+// 		ARISC_ERR("sst power para type err %d!", __LINE__);
+// 		return -EINVAL;
+// 	}
+// 	ARISC_INF("system_power is %#x\n", val.val);
+// 	arisc_powchk_back.power_state.system_power = val.val;
+// 	arisc_set_standby_power_cfg(&arisc_powchk_back);
 
 	return 0;
 }
