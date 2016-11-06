@@ -28,7 +28,7 @@
 #define IO_ADDRESS(x)                    IOMEM((x) + 0xf0000000)
 #define SUNXI_SRAM_A2_PBASE              0x00040000
 #define SUNXI_SRAM_A2_VBASE              IO_ADDRESS(SUNXI_SRAM_A2_PBASE      )
-#define PLL_DDR0_CLK                     "pll-ddr0"
+#define PLL_DDR0_CLK                     "pll_ddr0"
 #define PLL_DDR1_CLK                     "pll_ddr1"
 #define PLL_PERIPH_CLK                   "pll_periph"
 #define HOSC_CLK                         "hosc"

@@ -41,7 +41,7 @@ unsigned int arisc_debug_dram_crc_len = (1024 * 1024);
 unsigned int arisc_debug_dram_crc_error = 0;
 unsigned int arisc_debug_dram_crc_total_count = 0;
 unsigned int arisc_debug_dram_crc_error_count = 0;
-unsigned int arisc_debug_level = 0;
+unsigned int arisc_debug_level = 3;
 static unsigned char arisc_version[40] = "arisc defualt version";
 static unsigned int arisc_pll = 0;
 #if defined CONFIG_ARCH_SUN8IW1P1
@@ -1226,22 +1226,26 @@ static int  sunxi_arisc_probe(struct platform_device *pdev)
 {
 	int binary_len;
 	int ret;
-
+early_printk("**************************************************\n");
+early_printk("    ARISC PROBE\n");
+early_printk("**************************************************\n");
 	ARISC_INF("arisc initialize\n");
 
-	/* cfg sunxi arisc clk */
-	ret = sunxi_arisc_clk_cfg(pdev);
-	if (ret) {
-		ARISC_ERR("sunxi-arisc clk cfg failed\n");
-		return -EINVAL;
-	}
+early_printk("arisc skipping initialize clocks!\n");
+// 	/* cfg sunxi arisc clk */
+// 	ret = sunxi_arisc_clk_cfg(pdev);
+// 	if (ret) {
+// 		ARISC_ERR("sunxi-arisc clk cfg failed\n");
+// 		return -EINVAL;
+// 	}
 
-	/* cfg sunxi arisc pin */
-	ret = sunxi_arisc_pin_cfg(pdev);
-	if (ret) {
-		ARISC_ERR("sunxi-arisc pin cfg failed\n");
-		return -EINVAL;
-	}
+early_printk("arisc skipping initialize pins!\n");
+// 	/* cfg sunxi arisc pin */
+// 	ret = sunxi_arisc_pin_cfg(pdev);
+// 	if (ret) {
+// 		ARISC_ERR("sunxi-arisc pin cfg failed\n");
+// 		return -EINVAL;
+// 	}
 
 	ARISC_INF("sram_a2 vaddr(%x)\n", (unsigned int)arisc_sram_a2_vbase);
 
@@ -1251,9 +1255,16 @@ static int  sunxi_arisc_probe(struct platform_device *pdev)
 	binary_len = (int)(&arisc_binary_end) - (int)(&arisc_binary_start);
 #endif
 	/* clear sram_a2 area */
-	memset((void *)arisc_sram_a2_vbase, 0, SUNXI_SRAM_A2_SIZE);
+//	memset((void *)arisc_sram_a2_vbase, 0, SUNXI_SRAM_A2_SIZE);
 	/* load arisc system binary data to sram_a2 */
-	memcpy((void *)arisc_sram_a2_vbase, (void *)(&arisc_binary_start), binary_len);
+//	memcpy((void *)arisc_sram_a2_vbase, (void *)(&arisc_binary_start), binary_len);
+	{
+		void __iomem *iop;
+		iop = ioremap(SUNXI_SRAM_A2_PBASE, SUNXI_SRAM_A2_SIZE);
+		memset((void *)iop, 0, SUNXI_SRAM_A2_SIZE);
+		memcpy((void *)iop, (void *)(&arisc_binary_start), binary_len);
+		iounmap(iop);
+	}
 	ARISC_INF("move arisc binary data [addr = %x, len = %x] to sram_a2 finished\n",
 			 (unsigned int)(&arisc_binary_start), (unsigned int)binary_len);
 
@@ -1261,25 +1272,34 @@ static int  sunxi_arisc_probe(struct platform_device *pdev)
 	ARISC_INF("hwspinlock initialize\n");
 	arisc_hwspinlock_init();
 
-	/* initialize hwmsgbox */
-	ARISC_INF("hwmsgbox initialize\n");
-	arisc_hwmsgbox_init();
-
-	/* initialize message manager */
-	ARISC_INF("message manager initialize\n");
-	arisc_message_manager_init();
+//	/* initialize hwmsgbox */
+//	ARISC_INF("hwmsgbox initialize\n");
+//	arisc_hwmsgbox_init();
+//
+//	/* initialize message manager */
+//	ARISC_INF("message manager initialize\n");
+//	arisc_message_manager_init();
 
 	/* set arisc cpu reset to de-assert state */
 	ARISC_INF("set arisc reset to de-assert state\n");
 #if (defined CONFIG_ARCH_SUN8IW1P1) || (defined CONFIG_ARCH_SUN8IW3P1) || (defined CONFIG_ARCH_SUN8IW5P1) || (defined CONFIG_ARCH_SUN8IW6P1)
 	{
 		volatile unsigned long value;
-		value = readl((IO_ADDRESS(SUNXI_R_CPUCFG_PBASE) + 0x0));
+//		value = readl((IO_ADDRESS(SUNXI_R_CPUCFG_PBASE) + 0x0));
+//		value &= ~1;
+//		writel(value, (IO_ADDRESS(SUNXI_R_CPUCFG_PBASE) + 0x0));
+//		value = readl((IO_ADDRESS(SUNXI_R_CPUCFG_PBASE) + 0x0));
+//		value |= 1;
+//		writel(value, (IO_ADDRESS(SUNXI_R_CPUCFG_PBASE) + 0x0));
+		void __iomem *iop;
+		iop = ioremap(SUNXI_R_CPUCFG_PBASE, 0x10);
+		value = readl(iop);
 		value &= ~1;
-		writel(value, (IO_ADDRESS(SUNXI_R_CPUCFG_PBASE) + 0x0));
-		value = readl((IO_ADDRESS(SUNXI_R_CPUCFG_PBASE) + 0x0));
+		writel(value, iop);
+		value = readl(iop);
 		value |= 1;
-		writel(value, (IO_ADDRESS(SUNXI_R_CPUCFG_PBASE) + 0x0));
+		writel(value, iop);
+		iounmap(iop);
 	}
 #elif defined CONFIG_ARCH_SUN9IW1P1
 	{
