@@ -23,13 +23,15 @@
 #ifndef __ARISC_HWMSGBOX_H
 #define __ARISC_HWMSGBOX_H
 
+#include <linux/platform_device.h>
+
 /**
  * initialize hwmsgbox.
  * @para:  none.
  *
  * returns:  OK if initialize hwmsgbox succeeded, others if failed.
  */
-int arisc_hwmsgbox_init(void);
+int arisc_hwmsgbox_init(struct platform_device *pdev);
 
 /**
  * exit hwmsgbox.

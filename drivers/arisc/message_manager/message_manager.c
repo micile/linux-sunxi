@@ -39,6 +39,8 @@ static struct arisc_semaphore_cache sem_cache;
 
 static atomic_t sem_used_num;
 
+void __iomem *iop_message_pool_start;
+
 /**
  * initialize message manager.
  * @para:  none.
@@ -50,8 +52,11 @@ int arisc_message_manager_init(void)
 	int i;
 
 	/* initialize message pool start and end */
-	message_start = (struct arisc_message *)(arisc_sram_a2_vbase + ARISC_MESSAGE_POOL_START);
-	message_end   = (struct arisc_message *)(arisc_sram_a2_vbase + ARISC_MESSAGE_POOL_END);
+//	message_start = (struct arisc_message *)(arisc_sram_a2_vbase + ARISC_MESSAGE_POOL_START);
+//	message_end   = (struct arisc_message *)(arisc_sram_a2_vbase + ARISC_MESSAGE_POOL_END);
+	iop_message_pool_start = ioremap(SUNXI_SRAM_A2_PBASE + ARISC_MESSAGE_POOL_START, ARISC_MESSAGE_POOL_END - ARISC_MESSAGE_POOL_START);
+	message_start = (struct arisc_message *)(iop_message_pool_start);
+	message_end   = (struct arisc_message *)(iop_message_pool_start + ARISC_MESSAGE_POOL_END);
 
 	memset((void *)message_start, 0, message_end - message_start);
 

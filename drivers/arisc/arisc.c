@@ -1225,7 +1225,6 @@ static int  sunxi_arisc_pin_cfg(struct platform_device *pdev)
 static int  sunxi_arisc_probe(struct platform_device *pdev)
 {
 	int binary_len;
-	int ret;
 early_printk("**************************************************\n");
 early_printk("    ARISC PROBE\n");
 early_printk("**************************************************\n");
@@ -1272,13 +1271,13 @@ early_printk("arisc skipping initialize pins!\n");
 	ARISC_INF("hwspinlock initialize\n");
 	arisc_hwspinlock_init();
 
-//	/* initialize hwmsgbox */
-//	ARISC_INF("hwmsgbox initialize\n");
-//	arisc_hwmsgbox_init();
-//
-//	/* initialize message manager */
-//	ARISC_INF("message manager initialize\n");
-//	arisc_message_manager_init();
+	/* initialize hwmsgbox */
+	ARISC_INF("hwmsgbox initialize\n");
+	arisc_hwmsgbox_init(pdev);
+
+	/* initialize message manager */
+	ARISC_INF("message manager initialize\n");
+	arisc_message_manager_init();
 
 	/* set arisc cpu reset to de-assert state */
 	ARISC_INF("set arisc reset to de-assert state\n");
@@ -1313,12 +1312,6 @@ early_printk("arisc skipping initialize pins!\n");
 	}
 #endif
 
-early_printk("HOLD HOLD HOLD!\n");
-while (1) {
-binary_len++;
-}
-
-
 	/* wait arisc ready */
 	ARISC_INF("wait arisc ready....\n");
 	if (arisc_wait_ready(10000)) {
@@ -1332,33 +1325,33 @@ binary_len++;
 	arisc_hwmsgbox_enable_receiver_int(ARISC_HWMSGBOX_ARISC_SYN_TX_CH, AW_HWMSG_QUEUE_USER_AC327);
 
 	/* config dvfs v-f table */
-	if (arisc_dvfs_cfg_vf_table()) {
-		ARISC_WRN("config dvfs v-f table failed\n");
-	}
+// 	if (arisc_dvfs_cfg_vf_table()) {
+// 		ARISC_WRN("config dvfs v-f table failed\n");
+// 	}
 
 #if (defined CONFIG_ARCH_SUN8IW1P1) || (defined CONFIG_ARCH_SUN8IW6P1) || (defined CONFIG_ARCH_SUN9IW1P1)
 	/* config ir config paras */
-	if (arisc_config_ir_paras()) {
-		ARISC_WRN("config ir paras failed\n");
-	}
+// 	if (arisc_config_ir_paras()) {
+// 		ARISC_WRN("config ir paras failed\n");
+// 	}
 #endif
 
 #if (defined CONFIG_ARCH_SUN8IW1P1) || (defined CONFIG_ARCH_SUN8IW3P1) || (defined CONFIG_ARCH_SUN8IW5P1)
 	/* config pmu config paras */
-	if (arisc_config_pmu_paras()) {
-		ARISC_WRN("config pmu paras failed\n");
-	}
+// 	if (arisc_config_pmu_paras()) {
+// 		ARISC_WRN("config pmu paras failed\n");
+// 	}
 #endif
 
 	/* config dram config paras */
-	if (arisc_config_dram_paras()) {
-		ARISC_WRN("config dram paras failed\n");
-	}
+// 	if (arisc_config_dram_paras()) {
+// 		ARISC_WRN("config dram paras failed\n");
+// 	}
 #if (defined CONFIG_ARCH_SUN8IW5P1) || (defined CONFIG_ARCH_SUN9IW1P1)
 	/* config standby power paras */
-	if (arisc_sysconfig_sstpower_paras()) {
-		ARISC_WRN("config sst power paras failed\n");
-	}
+// 	if (arisc_sysconfig_sstpower_paras()) {
+// 		ARISC_WRN("config sst power paras failed\n");
+// 	}
 #endif
 	atomic_set(&arisc_suspend_flag, 0);
 
@@ -1371,6 +1364,9 @@ binary_len++;
 	/* arisc initialize succeeded */
 	ARISC_LOG("sunxi-arisc driver v%s startup succeeded\n", DRV_VERSION);
 
+//	sunxi_arisc_sysfs(&sunxi_arisc_device);
+	/* arisc init ok */
+	arisc_notify(ARISC_INIT_READY, NULL);
 
 	return 0;
 }
@@ -1391,6 +1387,14 @@ static struct platform_device sunxi_arisc_device = {
 	.resource       = sunxi_arisc_resource,
 };
 
+static const struct of_device_id sun8i_arisc_of_match[] = {
+	{
+		.compatible = "allwinner,sun8i-arisc",
+	},
+	{}
+};
+MODULE_DEVICE_TABLE(of, sun8i_arisc_of_match);
+
 static struct platform_driver sunxi_arisc_driver = {
 	.probe      = sunxi_arisc_probe,
 	.shutdown   = sunxi_arisc_shutdown,
@@ -1398,8 +1402,10 @@ static struct platform_driver sunxi_arisc_driver = {
 		.name     = DRV_NAME,
 		.owner    = THIS_MODULE,
 		.pm       = SUNXI_ARISC_DEV_PM_OPS,
+		.of_match_table = sun8i_arisc_of_match,
 	},
 };
+module_platform_driver(sunxi_arisc_driver);
 
 static int __init arisc_init(void)
 {
@@ -1439,9 +1445,8 @@ static void __exit arisc_exit(void)
 	ARISC_LOG("module unloaded\n");
 }
 
-subsys_initcall(arisc_init);
-module_exit(arisc_exit);
-
+//subsys_initcall(arisc_init);
+//module_exit(arisc_exit);
 MODULE_DESCRIPTION("SUNXI ARISC Driver");
 MODULE_AUTHOR("Superm Wu <superm@allwinnertech.com>");
 MODULE_LICENSE("GPL");

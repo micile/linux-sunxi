@@ -24,6 +24,9 @@
 
 static struct arisc_hwspinlock arisc_hwspinlocks[ARISC_HW_SPINLOCK_NUM];
 
+void __iomem *io_spinlock_pbase;
+#define IOP_SPINLOCK(offset) (io_spinlock_pbase - SUNXI_SPINLOCK_PBASE + offset)
+
 /**
  * initialize hwspinlock.
  * @para:  none.
@@ -37,6 +40,8 @@ int arisc_hwspinlock_init(void)
 	for (index = 0; index < ARISC_HW_SPINLOCK_NUM; index++)
 		spin_lock_init(&(arisc_hwspinlocks[index].lock));
 
+	io_spinlock_pbase = ioremap(SUNXI_SPINLOCK_PBASE, 0x200);
+
 	return 0;
 }
 
@@ -48,6 +53,7 @@ int arisc_hwspinlock_init(void)
  */
 int arisc_hwspinlock_exit(void)
 {
+	iounmap(io_spinlock_pbase);
 	return 0;
 }
 
@@ -80,7 +86,8 @@ int arisc_hwspin_lock_timeout(int hwid, unsigned int timeout)
 	}
 
 	/* try to take spinlock */
-	while (readl(IO_ADDRESS(AW_SPINLOCK_LOCK_REG(hwid))) == AW_SPINLOCK_TAKEN) {
+//	while (readl(IO_ADDRESS(AW_SPINLOCK_LOCK_REG(hwid))) == AW_SPINLOCK_TAKEN) {
+	while (readl(IOP_SPINLOCK(AW_SPINLOCK_LOCK_REG(hwid))) == AW_SPINLOCK_TAKEN) {
 		/*
 		 * The lock is already taken, let's check if the user wants
 		 * us to try again
@@ -112,7 +119,8 @@ int arisc_hwspin_unlock(int hwid)
 	spinlock = &(arisc_hwspinlocks[hwid]);
 
 	/* untaken the spinlock */
-	writel(0x0, IO_ADDRESS(AW_SPINLOCK_LOCK_REG(hwid)));
+//	writel(0x0, IO_ADDRESS(AW_SPINLOCK_LOCK_REG(hwid)));
+	writel(0x0, IOP_SPINLOCK(AW_SPINLOCK_LOCK_REG(hwid)));
 
 	spin_unlock_irqrestore(&(spinlock->lock), spinlock->flags);
 

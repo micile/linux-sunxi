@@ -70,6 +70,11 @@
 	};
 
 	soc@01c00000 {
+		arisc: arisc@2 {
+			compatible = "allwinner,sun8i-arisc";
+			interrupts = <GIC_SPI 49 IRQ_TYPE_LEVEL_HIGH>;
+		};
+
 		tcon0: lcd-controller@01c0c000 {
 			compatible = "allwinner,sun8i-a33-tcon";
 			reg = <0x01c0c000 0x1000>;

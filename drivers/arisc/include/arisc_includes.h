@@ -84,4 +84,6 @@ extern int arisc_sysconfig_sstpower_paras(void);
 /* global vars */
 extern unsigned long arisc_sram_a2_vbase;
 
+extern void __iomem *iop_message_pool_start;
+
 #endif /* __ARISC_INCLUDES_H */

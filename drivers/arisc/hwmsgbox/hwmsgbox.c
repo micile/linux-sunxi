@@ -21,12 +21,16 @@
  */
 
 #include "hwmsgbox_i.h"
+#include <linux/of_irq.h>
 
 /* spinlock for syn and asyn channel */
 static spinlock_t syn_channel_lock;
 static spinlock_t asyn_channel_lock;
 static spinlock_t int_lock;
 static unsigned long int_flag = 0;
+void __iomem *io_msgbox_pbase;
+void __iomem *io_sram_a2_pbase;
+#define IOP_HWMSGBOX(offset) (io_msgbox_pbase - SUNXI_MSGBOX_PBASE + offset)
 
 /**
  * initialize hwmsgbox.
@@ -34,20 +38,30 @@ static unsigned long int_flag = 0;
  *
  * returns:  0 if initialize hwmsgbox succeeded, others if failed.
  */
-int arisc_hwmsgbox_init(void)
+int arisc_hwmsgbox_init(struct platform_device *pdev)
 {
 	int ret;
+	int irq_num;
+
+	/* io remap the SUNXI_MSGBOX_PBASE */
+	io_msgbox_pbase = ioremap(SUNXI_MSGBOX_PBASE, 0x200);
+	io_sram_a2_pbase = ioremap(SUNXI_SRAM_A2_PBASE, SUNXI_SRAM_A2_SIZE);
 
 	/* initialize syn and asyn spinlock */
 	spin_lock_init(&(syn_channel_lock));
 	spin_lock_init(&(asyn_channel_lock));
 	spin_lock_init(&(int_lock));
 
-	writel(0xffffffff,IO_ADDRESS(AW_MSGBOX_IRQ_STATUS_REG(AW_HWMSG_QUEUE_USER_AC327)));
-	writel(0x0,IO_ADDRESS(AW_MSGBOX_IRQ_EN_REG(AW_HWMSG_QUEUE_USER_AC327)));
+//	writel(0xffffffff,IO_ADDRESS(AW_MSGBOX_IRQ_STATUS_REG(AW_HWMSG_QUEUE_USER_AC327)));
+//	writel(0x0,       IO_ADDRESS(AW_MSGBOX_IRQ_EN_REG(AW_HWMSG_QUEUE_USER_AC327)));
+	writel(0xffffffff, IOP_HWMSGBOX(AW_MSGBOX_IRQ_STATUS_REG(AW_HWMSG_QUEUE_USER_AC327)));
+	writel(0x0,        IOP_HWMSGBOX(AW_MSGBOX_IRQ_EN_REG(AW_HWMSG_QUEUE_USER_AC327)));
 
 	/* register msgbox interrupt */
-	ret = request_irq(SUNXI_IRQ_MBOX, arisc_hwmsgbox_int_handler,
+//	ret = request_irq(SUNXI_IRQ_MBOX, arisc_hwmsgbox_int_handler,
+//			IRQF_NO_SUSPEND, "arisc_hwmsgbox_irq", NULL);
+	irq_num = irq_of_parse_and_map(pdev->dev.of_node, 0);
+	ret = request_irq(irq_num, arisc_hwmsgbox_int_handler,
 			IRQF_NO_SUSPEND, "arisc_hwmsgbox_irq", NULL);
 	if (ret) {
 		ARISC_ERR("request_irq error, return %d\n", ret);
@@ -65,6 +79,8 @@ int arisc_hwmsgbox_init(void)
  */
 int arisc_hwmsgbox_exit(void)
 {
+	iounmap(io_msgbox_pbase);
+	iounmap(io_sram_a2_pbase);
 	return 0;
 }
 
@@ -88,7 +104,8 @@ int arisc_hwmsgbox_send_message(struct arisc_message *pmessage, unsigned int tim
 	if (pmessage->attr & ARISC_MESSAGE_ATTR_HARDSYN) {
 		/* use ac327 hwsyn transmit channel */
 		spin_lock(&syn_channel_lock);
-		while (readl(IO_ADDRESS(AW_MSGBOX_FIFO_STATUS_REG(ARISC_HWMSGBOX_AC327_SYN_TX_CH))) == 1) {
+//		while (readl(IO_ADDRESS(AW_MSGBOX_FIFO_STATUS_REG(ARISC_HWMSGBOX_AC327_SYN_TX_CH))) == 1) {
+		while (readl(IOP_HWMSGBOX(AW_MSGBOX_FIFO_STATUS_REG(ARISC_HWMSGBOX_AC327_SYN_TX_CH))) == 1) {
 			/* message-queue fifo is full */
 			if (time_is_before_eq_jiffies(expire)) {
 				ARISC_ERR("hw message queue fifo full timeout\n");
@@ -101,12 +118,16 @@ int arisc_hwmsgbox_send_message(struct arisc_message *pmessage, unsigned int tim
 				return -ETIMEDOUT;
 			}
 		}
-		value = ((volatile unsigned long)pmessage) - arisc_sram_a2_vbase;
+		// value is the address of the message relative to the io_sram_a2_pbase
+//		value = ((volatile unsigned long)pmessage) - arisc_sram_a2_vbase;
+		value = (volatile unsigned long)pmessage - (volatile unsigned long)iop_message_pool_start + ARISC_MESSAGE_POOL_START;
 		ARISC_INF("ac327 send hard syn message : %x\n", (unsigned int)value);
-		writel(value, IO_ADDRESS(AW_MSGBOX_MSG_REG(ARISC_HWMSGBOX_AC327_SYN_TX_CH)));
+//		writel(value, IO_ADDRESS(AW_MSGBOX_MSG_REG(ARISC_HWMSGBOX_AC327_SYN_TX_CH)));
+		writel(value, IOP_HWMSGBOX(AW_MSGBOX_MSG_REG(ARISC_HWMSGBOX_AC327_SYN_TX_CH)));
 
 		/* hwsyn messsage must feedback use syn rx channel */
-		while (readl(IO_ADDRESS(AW_MSGBOX_MSG_STATUS_REG(ARISC_HWMSGBOX_AC327_SYN_RX_CH))) == 0) {
+//		while (readl(IO_ADDRESS(AW_MSGBOX_MSG_STATUS_REG(ARISC_HWMSGBOX_AC327_SYN_RX_CH))) == 0) {
+		while (readl(IOP_HWMSGBOX(AW_MSGBOX_MSG_STATUS_REG(ARISC_HWMSGBOX_AC327_SYN_RX_CH))) == 0) {
 			if (time_is_before_eq_jiffies(expire)) {
 				ARISC_ERR("wait hard syn message time out\n");
 				ARISC_ERR("message addr   : %x\n", (u32)pmessage);
@@ -119,8 +140,10 @@ int arisc_hwmsgbox_send_message(struct arisc_message *pmessage, unsigned int tim
 			}
 		}
 		/* check message valid */
-		if (value != (readl(IO_ADDRESS(AW_MSGBOX_MSG_REG(ARISC_HWMSGBOX_AC327_SYN_RX_CH))))) {
-			ARISC_ERR("hard syn message error [%x, %x]\n", (u32)value, (u32)(readl(IO_ADDRESS(AW_MSGBOX_MSG_REG(ARISC_HWMSGBOX_AC327_SYN_RX_CH)))));
+//		if (value != (readl(IO_ADDRESS(AW_MSGBOX_MSG_REG(ARISC_HWMSGBOX_AC327_SYN_RX_CH))))) {
+		if (value != (readl(IOP_HWMSGBOX(AW_MSGBOX_MSG_REG(ARISC_HWMSGBOX_AC327_SYN_RX_CH))))) {
+//			ARISC_ERR("hard syn message error [%x, %x]\n", (u32)value, (u32)(readl(IO_ADDRESS(AW_MSGBOX_MSG_REG(ARISC_HWMSGBOX_AC327_SYN_RX_CH)))));
+			ARISC_ERR("hard syn message error [%x, %x]\n", (u32)value, (u32)(readl(IOP_HWMSGBOX(AW_MSGBOX_MSG_REG(ARISC_HWMSGBOX_AC327_SYN_RX_CH)))));
 			spin_unlock(&syn_channel_lock);
 			return -EINVAL;
 		}
@@ -147,7 +170,8 @@ int arisc_hwmsgbox_send_message(struct arisc_message *pmessage, unsigned int tim
 
 	/* use ac327 asyn transmit channel */
 	spin_lock(&asyn_channel_lock);
-	while (readl(IO_ADDRESS(AW_MSGBOX_FIFO_STATUS_REG(ARISC_HWMSGBOX_ARISC_ASYN_RX_CH))) == 1) {
+//	while (readl(IO_ADDRESS(AW_MSGBOX_FIFO_STATUS_REG(ARISC_HWMSGBOX_ARISC_ASYN_RX_CH))) == 1) {
+	while (readl(IOP_HWMSGBOX(AW_MSGBOX_FIFO_STATUS_REG(ARISC_HWMSGBOX_ARISC_ASYN_RX_CH))) == 1) {
 		/* message-queue fifo is full */
 		if (time_is_before_eq_jiffies(expire)) {
 			ARISC_ERR("wait asyn message time out\n");
@@ -161,9 +185,11 @@ int arisc_hwmsgbox_send_message(struct arisc_message *pmessage, unsigned int tim
 		}
 	}
 	/* write message to message-queue fifo */
-	value = ((volatile unsigned long)pmessage) - arisc_sram_a2_vbase;
+//	value = ((volatile unsigned long)pmessage) - arisc_sram_a2_vbase;
+	value = ((volatile unsigned long)pmessage) - (unsigned long)io_sram_a2_pbase;
 //	ARISC_INF("ac327 send message : %x\n", (unsigned int)value);
-	writel(value, IO_ADDRESS(AW_MSGBOX_MSG_REG(ARISC_HWMSGBOX_ARISC_ASYN_RX_CH)));
+//	writel(value, IO_ADDRESS(AW_MSGBOX_MSG_REG(ARISC_HWMSGBOX_ARISC_ASYN_RX_CH)));
+	writel(value, IOP_HWMSGBOX(AW_MSGBOX_MSG_REG(ARISC_HWMSGBOX_ARISC_ASYN_RX_CH)));
 	spin_unlock(&asyn_channel_lock);
 
 	/* syn messsage must wait message feedback */
@@ -179,13 +205,13 @@ int arisc_hwmsgbox_feedback_message(struct arisc_message *pmessage, unsigned int
 {
 	volatile unsigned long value;
 	unsigned long          expire;
-
 	expire = msecs_to_jiffies(timeout) + jiffies;
 
 	if (pmessage->attr & ARISC_MESSAGE_ATTR_HARDSYN) {
 		/* use ac327 hard syn receiver channel */
 		spin_lock(&syn_channel_lock);
-		while (readl(IO_ADDRESS(AW_MSGBOX_FIFO_STATUS_REG(ARISC_HWMSGBOX_ARISC_SYN_RX_CH))) == 1) {
+//		while (readl(IO_ADDRESS(AW_MSGBOX_FIFO_STATUS_REG(ARISC_HWMSGBOX_ARISC_SYN_RX_CH))) == 1) {
+		while (readl(IOP_HWMSGBOX(AW_MSGBOX_FIFO_STATUS_REG(ARISC_HWMSGBOX_ARISC_SYN_RX_CH))) == 1) {
 			/* message-queue fifo is full */
 			if (time_is_before_eq_jiffies(expire)) {
 				ARISC_ERR("wait syn message-queue fifo full timeout\n");
@@ -198,16 +224,19 @@ int arisc_hwmsgbox_feedback_message(struct arisc_message *pmessage, unsigned int
 				return -ETIMEDOUT;
 			}
 		}
-		value = ((volatile unsigned long)pmessage) - arisc_sram_a2_vbase;
+//		value = ((volatile unsigned long)pmessage) - arisc_sram_a2_vbase;
+		value = ((volatile unsigned long)pmessage) - (unsigned long)io_sram_a2_pbase;
 		ARISC_INF("arisc feedback hard syn message : %x\n", (unsigned int)value);
-		writel(value, IO_ADDRESS(AW_MSGBOX_MSG_REG(ARISC_HWMSGBOX_ARISC_SYN_RX_CH)));
+//		writel(value, IO_ADDRESS(AW_MSGBOX_MSG_REG(ARISC_HWMSGBOX_ARISC_SYN_RX_CH)));
+		writel(value, IOP_HWMSGBOX(AW_MSGBOX_MSG_REG(ARISC_HWMSGBOX_ARISC_SYN_RX_CH)));
 		spin_unlock(&syn_channel_lock);
 		return 0;
 	}
 	/* soft syn use asyn tx channel */
 	if (pmessage->attr & ARISC_MESSAGE_ATTR_SOFTSYN) {
 		spin_lock(&asyn_channel_lock);
-		while (readl(IO_ADDRESS(AW_MSGBOX_FIFO_STATUS_REG(ARISC_HWMSGBOX_ARISC_ASYN_RX_CH))) == 1) {
+//		while (readl(IO_ADDRESS(AW_MSGBOX_FIFO_STATUS_REG(ARISC_HWMSGBOX_ARISC_ASYN_RX_CH))) == 1) {
+		while (readl(IOP_HWMSGBOX(AW_MSGBOX_FIFO_STATUS_REG(ARISC_HWMSGBOX_ARISC_ASYN_RX_CH))) == 1) {
 			/* fifo is full */
 			if (time_is_before_eq_jiffies(expire)) {
 				ARISC_ERR("wait asyn message-queue fifo full timeout\n");
@@ -221,13 +250,14 @@ int arisc_hwmsgbox_feedback_message(struct arisc_message *pmessage, unsigned int
 			}
 		}
 		/* write message to message-queue fifo */
-		value = ((volatile unsigned long)pmessage) - arisc_sram_a2_vbase;
+//		value = ((volatile unsigned long)pmessage) - arisc_sram_a2_vbase;
+		value = ((volatile unsigned long)pmessage) - (unsigned long)io_sram_a2_pbase;
 		ARISC_INF("arisc send asyn or soft syn message : %x\n", (unsigned int)value);
-		writel(value, IO_ADDRESS(AW_MSGBOX_MSG_REG(ARISC_HWMSGBOX_ARISC_ASYN_RX_CH)));
+//		writel(value, IO_ADDRESS(AW_MSGBOX_MSG_REG(ARISC_HWMSGBOX_ARISC_ASYN_RX_CH)));
+		writel(value, IOP_HWMSGBOX(AW_MSGBOX_MSG_REG(ARISC_HWMSGBOX_ARISC_ASYN_RX_CH)));
 		spin_unlock(&asyn_channel_lock);
 		return 0;
 	}
-
 	/* invalid syn message */
 	return -EINVAL;
 }
@@ -243,10 +273,12 @@ int arisc_hwmsgbox_enable_receiver_int(int queue, int user)
 {
 	volatile unsigned int value;
 
-	value  =  readl(IO_ADDRESS(AW_MSGBOX_IRQ_EN_REG(user)));
+//	value  =  readl(IO_ADDRESS(AW_MSGBOX_IRQ_EN_REG(user)));
+	value  =  readl(IOP_HWMSGBOX(AW_MSGBOX_IRQ_EN_REG(user)));
 	value &= ~(0x1 << (queue * 2));
 	value |=  (0x1 << (queue * 2));
-	writel(value, IO_ADDRESS(AW_MSGBOX_IRQ_EN_REG(user)));
+//	writel(value, IO_ADDRESS(AW_MSGBOX_IRQ_EN_REG(user)));
+	writel(value, IOP_HWMSGBOX(AW_MSGBOX_IRQ_EN_REG(user)));
 
 	return 0;
 }
@@ -262,9 +294,11 @@ int arisc_hwmsgbox_disable_receiver_int(int queue, int user)
 {
 	volatile unsigned int value;
 
-	value  =  readl(IO_ADDRESS(AW_MSGBOX_IRQ_EN_REG(user)));
+//	value  =  readl(IO_ADDRESS(AW_MSGBOX_IRQ_EN_REG(user)));
+	value  =  readl(IOP_HWMSGBOX(AW_MSGBOX_IRQ_EN_REG(user)));
 	value &= ~(0x1 << (queue * 2));
-	writel(value, IO_ADDRESS(AW_MSGBOX_IRQ_EN_REG(user)));
+//	writel(value, IO_ADDRESS(AW_MSGBOX_IRQ_EN_REG(user)));
+	writel(value, IOP_HWMSGBOX(AW_MSGBOX_IRQ_EN_REG(user)));
 
 	return 0;
 }
@@ -280,7 +314,8 @@ int arisc_hwmsgbox_query_receiver_pending(int queue, int user)
 {
 	volatile unsigned long value;
 
-	value  =  readl(IO_ADDRESS((AW_MSGBOX_IRQ_STATUS_REG(user))));
+//	value  =  readl(IO_ADDRESS((AW_MSGBOX_IRQ_STATUS_REG(user))));
+	value  =  readl(IOP_HWMSGBOX((AW_MSGBOX_IRQ_STATUS_REG(user))));
 
 	return value & (0x1 << (queue * 2));
 }
@@ -294,7 +329,8 @@ int arisc_hwmsgbox_query_receiver_pending(int queue, int user)
  */
 int arisc_hwmsgbox_clear_receiver_pending(int queue, int user)
 {
-	writel((0x1 << (queue * 2)), IO_ADDRESS(AW_MSGBOX_IRQ_STATUS_REG(user)));
+//	writel((0x1 << (queue * 2)), IO_ADDRESS(AW_MSGBOX_IRQ_STATUS_REG(user)));
+	writel((0x1 << (queue * 2)), IOP_HWMSGBOX(AW_MSGBOX_IRQ_STATUS_REG(user)));
 
 	return 0;
 }
@@ -326,11 +362,14 @@ irqreturn_t arisc_hwmsgbox_int_handler(int irq, void *dev)
 #endif
 //	ARISC_INF("ac327 msgbox interrupt handler...\n");
 	spin_lock_irqsave(&(int_lock), int_flag);
+
 	/* process ac327 asyn received channel, process all received messages */
-	while (readl(IO_ADDRESS(AW_MSGBOX_MSG_STATUS_REG(ARISC_HWMSGBOX_ARISC_ASYN_TX_CH)))) {
+//	while (readl(IO_ADDRESS(AW_MSGBOX_MSG_STATUS_REG(ARISC_HWMSGBOX_ARISC_ASYN_TX_CH)))) {
+	while (readl(IOP_HWMSGBOX(AW_MSGBOX_MSG_STATUS_REG(ARISC_HWMSGBOX_ARISC_ASYN_TX_CH)))) {
 		volatile unsigned long value;
 		struct arisc_message *pmessage;
-		value = readl(IO_ADDRESS(AW_MSGBOX_MSG_REG(ARISC_HWMSGBOX_ARISC_ASYN_TX_CH))) + arisc_sram_a2_vbase;
+//		value = readl(IO_ADDRESS(AW_MSGBOX_MSG_REG(ARISC_HWMSGBOX_ARISC_ASYN_TX_CH))) + arisc_sram_a2_vbase;
+		value = readl(IOP_HWMSGBOX(AW_MSGBOX_MSG_REG(ARISC_HWMSGBOX_ARISC_ASYN_TX_CH))) + arisc_sram_a2_vbase;
 		pmessage = (struct arisc_message *)value;
 		if (arisc_message_valid(pmessage)) {
 			/* message state switch */
@@ -378,10 +417,12 @@ irqreturn_t arisc_hwmsgbox_int_handler(int irq, void *dev)
 	arisc_hwmsgbox_clear_receiver_pending(ARISC_HWMSGBOX_ARISC_ASYN_TX_CH, AW_HWMSG_QUEUE_USER_AC327);
 
 	/* process ac327 syn received channel, process only one message */
-	if (readl(IO_ADDRESS(AW_MSGBOX_MSG_STATUS_REG(ARISC_HWMSGBOX_ARISC_SYN_TX_CH)))) {
+//	if (readl(IO_ADDRESS(AW_MSGBOX_MSG_STATUS_REG(ARISC_HWMSGBOX_ARISC_SYN_TX_CH)))) {
+	if (readl(IOP_HWMSGBOX(AW_MSGBOX_MSG_STATUS_REG(ARISC_HWMSGBOX_ARISC_SYN_TX_CH)))) {
 		volatile unsigned long value;
 		struct arisc_message *pmessage;
-		value = readl(IO_ADDRESS(AW_MSGBOX_MSG_REG(ARISC_HWMSGBOX_ARISC_SYN_TX_CH))) + arisc_sram_a2_vbase;
+//		value = readl(IO_ADDRESS(AW_MSGBOX_MSG_REG(ARISC_HWMSGBOX_ARISC_SYN_TX_CH))) + arisc_sram_a2_vbase;
+		value = readl(IOP_HWMSGBOX(AW_MSGBOX_MSG_REG(ARISC_HWMSGBOX_ARISC_SYN_TX_CH))) + arisc_sram_a2_vbase;
 		pmessage = (struct arisc_message *)value;
 		if (arisc_message_valid(pmessage)) {
 			/* message state switch */
@@ -422,10 +463,13 @@ struct arisc_message *arisc_hwmsgbox_query_message(void)
 	struct arisc_message *pmessage = NULL;
 
 	/* query ac327 asyn received channel */
-	if (readl(IO_ADDRESS(AW_MSGBOX_MSG_STATUS_REG(ARISC_HWMSGBOX_ARISC_ASYN_TX_CH)))) {
+//	if (readl(IO_ADDRESS(AW_MSGBOX_MSG_STATUS_REG(ARISC_HWMSGBOX_ARISC_ASYN_TX_CH)))) {
+	if (readl(IOP_HWMSGBOX(AW_MSGBOX_MSG_STATUS_REG(ARISC_HWMSGBOX_ARISC_ASYN_TX_CH)))) {
 		volatile unsigned long value;
-		value = readl(IO_ADDRESS(AW_MSGBOX_MSG_REG(ARISC_HWMSGBOX_ARISC_ASYN_TX_CH)));
-		pmessage = (struct arisc_message *)(value + arisc_sram_a2_vbase);
+//		value = readl(IO_ADDRESS(AW_MSGBOX_MSG_REG(ARISC_HWMSGBOX_ARISC_ASYN_TX_CH)));
+		value = readl(IOP_HWMSGBOX(AW_MSGBOX_MSG_REG(ARISC_HWMSGBOX_ARISC_ASYN_TX_CH)));
+//		pmessage = (struct arisc_message *)(value + arisc_sram_a2_vbase);
+		pmessage = (struct arisc_message *)(value + io_sram_a2_pbase);
 
 		if (arisc_message_valid(pmessage)) {
 			/* message state switch */
@@ -445,10 +489,13 @@ struct arisc_message *arisc_hwmsgbox_query_message(void)
 		return pmessage;
 	}
 	/* query ac327 syn received channel */
-	if (readl(IO_ADDRESS(AW_MSGBOX_MSG_STATUS_REG(ARISC_HWMSGBOX_ARISC_SYN_TX_CH)))) {
+//	if (readl(IO_ADDRESS(AW_MSGBOX_MSG_STATUS_REG(ARISC_HWMSGBOX_ARISC_SYN_TX_CH)))) {
+	if (readl(IOP_HWMSGBOX(AW_MSGBOX_MSG_STATUS_REG(ARISC_HWMSGBOX_ARISC_SYN_TX_CH)))) {
 		volatile unsigned long value;
-		value = readl(IO_ADDRESS(AW_MSGBOX_MSG_REG(ARISC_HWMSGBOX_ARISC_SYN_TX_CH)));
-		pmessage = (struct arisc_message *)(value + arisc_sram_a2_vbase);
+//		value = readl(IO_ADDRESS(AW_MSGBOX_MSG_REG(ARISC_HWMSGBOX_ARISC_SYN_TX_CH)));
+		value = readl(IOP_HWMSGBOX(AW_MSGBOX_MSG_REG(ARISC_HWMSGBOX_ARISC_SYN_TX_CH)));
+//		pmessage = (struct arisc_message *)(value + arisc_sram_a2_vbase);
+		pmessage = (struct arisc_message *)(value + io_sram_a2_pbase);
 		if (arisc_message_valid(pmessage)) {
 			/* message state switch */
 			if (pmessage->state == ARISC_MESSAGE_PROCESSED) {
@@ -495,8 +542,10 @@ int arisc_hwmsgbox_message_feedback(struct arisc_message *pmessage)
 
 int arisc_message_valid(struct arisc_message *pmessage)
 {
-	if ((((u32)pmessage) >= (ARISC_MESSAGE_POOL_START + arisc_sram_a2_vbase)) &&
-		(((u32)pmessage) <  (ARISC_MESSAGE_POOL_END   + arisc_sram_a2_vbase))) {
+//	if ((((u32)pmessage) >= (ARISC_MESSAGE_POOL_START + arisc_sram_a2_vbase)) &&
+//		(((u32)pmessage) <  (ARISC_MESSAGE_POOL_END   + arisc_sram_a2_vbase))) {
+	if ((((u32)pmessage) >= (ARISC_MESSAGE_POOL_START + (unsigned long)io_sram_a2_pbase)) &&
+		(((u32)pmessage) <  (ARISC_MESSAGE_POOL_END   + (unsigned long)io_sram_a2_pbase))) {
 
 		/* valid message */
 		return 1;

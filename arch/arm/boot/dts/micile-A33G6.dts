@@ -117,3 +117,7 @@
 	allwinner,pa-gpios = <&pio 7 9 GPIO_ACTIVE_HIGH>; /* PH9 */
 	status = "okay";
 };
+
+&arisc {
+	status = "okay";
+};
