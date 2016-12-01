@@ -1075,6 +1075,16 @@ static int  sunxi_arisc_clk_cfg(struct platform_device *pdev)
 
 static int  sunxi_arisc_pin_cfg(struct platform_device *pdev)
 {
+	void __iomem *iop;
+	u32 val;
+
+	// Set PL2 and PL3 to be the r_uart pins
+	iop = ioremap_nocache(0x01f02c00, 0x30);
+	val = ioread32(iop);
+	val = val & 0xFFFF00FF;
+	val = val | 0x00002200;
+	iowrite32(val, iop);
+	iounmap(iop);
 // 	script_item_u script_val;
 // 	script_item_value_type_e type;
 // 	script_item_u  *pin_list;
@@ -1225,6 +1235,7 @@ static int  sunxi_arisc_pin_cfg(struct platform_device *pdev)
 static int  sunxi_arisc_probe(struct platform_device *pdev)
 {
 	int binary_len;
+	int ret;
 early_printk("**************************************************\n");
 early_printk("    ARISC PROBE\n");
 early_printk("**************************************************\n");
@@ -1238,13 +1249,12 @@ early_printk("arisc skipping initialize clocks!\n");
 // 		return -EINVAL;
 // 	}
 
-early_printk("arisc skipping initialize pins!\n");
-// 	/* cfg sunxi arisc pin */
-// 	ret = sunxi_arisc_pin_cfg(pdev);
-// 	if (ret) {
-// 		ARISC_ERR("sunxi-arisc pin cfg failed\n");
-// 		return -EINVAL;
-// 	}
+	/* cfg sunxi arisc pin */
+	ret = sunxi_arisc_pin_cfg(pdev);
+	if (ret) {
+		ARISC_ERR("sunxi-arisc pin cfg failed\n");
+		return -EINVAL;
+	}
 
 	ARISC_INF("sram_a2 vaddr(%x)\n", (unsigned int)arisc_sram_a2_vbase);
 
@@ -1317,6 +1327,7 @@ early_printk("arisc skipping initialize pins!\n");
 	if (arisc_wait_ready(10000)) {
 		ARISC_LOG("arisc startup failed\n");
 	}
+	arisc_set_uart_baudrate(arisc_debug_baudrate);
 
 	/* enable arisc asyn tx interrupt */
 	arisc_hwmsgbox_enable_receiver_int(ARISC_HWMSGBOX_ARISC_ASYN_TX_CH, AW_HWMSG_QUEUE_USER_AC327);
