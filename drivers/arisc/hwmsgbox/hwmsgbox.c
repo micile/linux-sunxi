@@ -120,7 +120,7 @@ int arisc_hwmsgbox_send_message(struct arisc_message *pmessage, unsigned int tim
 		}
 		// value is the address of the message relative to the io_sram_a2_pbase
 //		value = ((volatile unsigned long)pmessage) - arisc_sram_a2_vbase;
-		value = (volatile unsigned long)pmessage - (volatile unsigned long)iop_message_pool_start + ARISC_MESSAGE_POOL_START;
+		value = (volatile unsigned long)pmessage - (volatile unsigned long)io_sram_a2_pbase;
 		ARISC_INF("ac327 send hard syn message : %x\n", (unsigned int)value);
 //		writel(value, IO_ADDRESS(AW_MSGBOX_MSG_REG(ARISC_HWMSGBOX_AC327_SYN_TX_CH)));
 		writel(value, IOP_HWMSGBOX(AW_MSGBOX_MSG_REG(ARISC_HWMSGBOX_AC327_SYN_TX_CH)));
@@ -368,8 +368,10 @@ irqreturn_t arisc_hwmsgbox_int_handler(int irq, void *dev)
 	while (readl(IOP_HWMSGBOX(AW_MSGBOX_MSG_STATUS_REG(ARISC_HWMSGBOX_ARISC_ASYN_TX_CH)))) {
 		volatile unsigned long value;
 		struct arisc_message *pmessage;
+		// The value (0x13000) is an offset from SUNXI_SRAM_A2_PBASE, but already has the ARISC_MESSAGE_POOL_START (0x13000) built in
+		// We need to map this value relative to io_sram_a2_pbase
 //		value = readl(IO_ADDRESS(AW_MSGBOX_MSG_REG(ARISC_HWMSGBOX_ARISC_ASYN_TX_CH))) + arisc_sram_a2_vbase;
-		value = readl(IOP_HWMSGBOX(AW_MSGBOX_MSG_REG(ARISC_HWMSGBOX_ARISC_ASYN_TX_CH))) + arisc_sram_a2_vbase;
+		value = readl(IOP_HWMSGBOX(AW_MSGBOX_MSG_REG(ARISC_HWMSGBOX_ARISC_ASYN_TX_CH))) + io_sram_a2_pbase;
 		pmessage = (struct arisc_message *)value;
 		if (arisc_message_valid(pmessage)) {
 			/* message state switch */
@@ -421,8 +423,10 @@ irqreturn_t arisc_hwmsgbox_int_handler(int irq, void *dev)
 	if (readl(IOP_HWMSGBOX(AW_MSGBOX_MSG_STATUS_REG(ARISC_HWMSGBOX_ARISC_SYN_TX_CH)))) {
 		volatile unsigned long value;
 		struct arisc_message *pmessage;
+		// The value (0x13000) is an offset from SUNXI_SRAM_A2_PBASE, but already has the ARISC_MESSAGE_POOL_START (0x13000) built in
+		// We need to map this value relative to io_sram_a2_pbase
 //		value = readl(IO_ADDRESS(AW_MSGBOX_MSG_REG(ARISC_HWMSGBOX_ARISC_SYN_TX_CH))) + arisc_sram_a2_vbase;
-		value = readl(IOP_HWMSGBOX(AW_MSGBOX_MSG_REG(ARISC_HWMSGBOX_ARISC_SYN_TX_CH))) + arisc_sram_a2_vbase;
+		value = readl(IOP_HWMSGBOX(AW_MSGBOX_MSG_REG(ARISC_HWMSGBOX_ARISC_SYN_TX_CH))) + io_sram_a2_pbase;
 		pmessage = (struct arisc_message *)value;
 		if (arisc_message_valid(pmessage)) {
 			/* message state switch */
@@ -492,6 +496,8 @@ struct arisc_message *arisc_hwmsgbox_query_message(void)
 //	if (readl(IO_ADDRESS(AW_MSGBOX_MSG_STATUS_REG(ARISC_HWMSGBOX_ARISC_SYN_TX_CH)))) {
 	if (readl(IOP_HWMSGBOX(AW_MSGBOX_MSG_STATUS_REG(ARISC_HWMSGBOX_ARISC_SYN_TX_CH)))) {
 		volatile unsigned long value;
+		// The value (0x13000) is an offset from SUNXI_SRAM_A2_PBASE, but already has the ARISC_MESSAGE_POOL_START (0x13000) built in
+		// We need to map this value relative to io_sram_a2_pbase
 //		value = readl(IO_ADDRESS(AW_MSGBOX_MSG_REG(ARISC_HWMSGBOX_ARISC_SYN_TX_CH)));
 		value = readl(IOP_HWMSGBOX(AW_MSGBOX_MSG_REG(ARISC_HWMSGBOX_ARISC_SYN_TX_CH)));
 //		pmessage = (struct arisc_message *)(value + arisc_sram_a2_vbase);

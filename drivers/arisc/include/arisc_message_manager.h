@@ -67,4 +67,6 @@ int arisc_message_coming_notify(struct arisc_message *pmessage);
 
 int arisc_semaphore_used_num_query(void);
 
+extern void __iomem *io_sram_a2_pbase;
+
 #endif  /* __MESSAGE_MANAGER_H */

@@ -527,8 +527,8 @@
 			ahb0: ahb0_clk {
 				compatible = "fixed-factor-clock";
 				#clock-cells = <0>;
-				clock-div = <1>;
-				clock-mult = <1>;
+				clock-div = <3>;
+				clock-mult = <25>;
 				clocks = <&ar100>;
 				clock-output-names = "ahb0";
 			};
@@ -604,7 +604,7 @@
 			reg = <0x01f03400 0x400>;
 			interrupts = <GIC_SPI 39 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&apb0_gates 3>;
-			clock-frequency = <3000000>;
+			clock-frequency = <2000000>;
 			resets = <&apb0_rst 3>;
 			pinctrl-names = "default";
 			pinctrl-0 = <&r_rsb_pins>;

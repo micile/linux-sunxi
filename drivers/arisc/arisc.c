@@ -1376,6 +1376,7 @@ early_printk("arisc skipping initialize clocks!\n");
 	ARISC_LOG("sunxi-arisc driver v%s startup succeeded\n", DRV_VERSION);
 
 //	sunxi_arisc_sysfs(&sunxi_arisc_device);
+	sunxi_arisc_sysfs(pdev);
 	/* arisc init ok */
 	arisc_notify(ARISC_INIT_READY, NULL);
 
