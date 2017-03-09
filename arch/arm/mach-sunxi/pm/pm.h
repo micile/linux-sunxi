@@ -84,6 +84,8 @@ struct aw_mem_para{
 	struct clk_misc_t clk_misc;	//miscellaneous para.
 	struct pll_factor_t pll_factor;
 	struct mmu_state saved_mmu_state;
+	struct mmu_state saved_mmu_state_sec;
+	__u32 mvbar;
 };
 
 typedef  int (*suspend_func)(void);
@@ -121,6 +123,7 @@ extern int jump_to_resume0_nommu(void* pointer);
 
 /*mmu_pc.c*/
 extern void save_mmu_state(struct mmu_state *saved_mmu_state);
+extern void save_mmu_state_sec(struct mmu_state *saved_mmu_state);
 extern void restore_mmu_state(struct mmu_state *saved_mmu_state);
 void set_ttbr0(void);
 extern void invalidate_dcache(void);

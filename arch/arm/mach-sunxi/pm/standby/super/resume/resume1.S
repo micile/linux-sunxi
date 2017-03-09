@@ -26,6 +26,10 @@
 ***********************************************************************************************************************/
 #include "./../../../pm_assembler_i.h"
 
+#include <linux/linkage.h>
+
+.arch_extension sec
+
 #define  ARMV7_USR_MODE        0x10
 #define  ARMV7_FIQ_MODE        0x11
 #define  ARMV7_IRQ_MODE        0x12
@@ -121,6 +125,94 @@ config_end:
 	lsl	r0, r0, #9
 	add	sp, r0, #(SP_IN_SRAM_START)
 
+/* ================================================== 	*/
+/*		ENABLE JTAG, GPIO PE4 AS OUTPUT		*/
+/* ================================================== 	*/
+// enable the jtag
+	ldr r0, =0x01c208b4
+	movw r1,#0x3733
+	movt r1,#0x37
+	str r1, [r0]
+
+/* [0x01c20890] = 0x77717777 */
+/* [0x01c208A0] = 0x00000010 */
+// // enable the debug gpio
+// 	ldr r0, =0x1c20890
+// 	movw r1,#0x7777
+// 	movt r1,#0x7771
+// 	str r1, [r0]
+//
+// // make the gpio go low
+// 	ldr r0, =0x01c208A0
+// 	movw r1,#0x0000
+// 	movt r1,#0x0000
+// 	str r1, [r0]
+//
+// // make the gpio go high
+// 	ldr r0, =0x1c208a0
+// 	movw r1,#0x0010
+// 	movt r1,#0x0000
+// 	str r1, [r0]
+
+// jtag_wait_loop:
+// 	nop
+// 	b jtag_wait_loop
+
+// load up the new monitor vector table
+	ldr	r5, =_monitor_setup_vectors
+	mcr	p15, 0, r5, c12, c0, 1
+	isb
+
+// use smc instruction enter secure monitor exception
+	ldr	r0, =_finish
+	mov	ip, r0
+	mov	r0, r1
+	mov	r1, r2
+	mov	r2, r3
+	smc	#0
+
+/* ================================================== 	*/
+/*		EXCEPTION VECTOR AND HANDLER		*/
+/* ================================================== 	*/
+.align	5
+_monitor_setup_vectors:
+	.word 0					// reset
+	.word 0					// undefined instruction
+	adr pc, _mon_setup_smc_exception	// smc / svc
+	.word 0					// prefetech
+	.word 0					// data
+	.word 0					// not used
+	.word 0					// irq
+	.word 0					// fiq
+
+_mon_setup_smc_exception:
+	ldr sp, =secure_stack_area_end
+	push {ip}
+	bl exception_handler_mon_setup_smc
+	pop {ip}
+
+	mrc	p15, 0, r5, c1, c1, 0		@ read SCR
+	bic	r5, r5, #0x4a			@ clear IRQ, EA, nET bits
+	orr	r5, r5, #0x31			@ enable NS, AW, FW bits
+//	orr	r5, r5, #0x30			@ uncomment to test in secure mode
+						@ FIQ preserved for secure mode
+	mov	r6, #ARMV7_SVC_MODE		@ default mode is SVC
+	mcr	p15, 0, r5, c1, c1, 0		@ write SCR (with NS bit set)
+	isb
+
+	mov	lr, ip
+	movs	pc, lr				@ ERET to non-secure
+
+/* ================================================== 	*/
+/*		SECURE STACK				*/
+/* ================================================== 	*/
+.balign 4
+secure_stack_area_start:
+	.skip 396
+secure_stack_area_end:
+	.skip 4
+
+_finish:
 /**********************************the end of initializing system*********************************/
 	bl set_pll
 	bl  resume1_c_part

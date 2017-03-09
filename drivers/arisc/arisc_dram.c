@@ -64,6 +64,32 @@ static __dram_para_t arisc_dram_paras;
 
 static int arisc_get_dram_cfg(void)
 {
+	printk("***** SUPER HACK!!! THE DRAM PARAMS ARE HARDCODED FOR SINLINX SINA-33!\n");
+	arisc_dram_paras.dram_clk = 0x228;
+	arisc_dram_paras.dram_type = 0x3;
+	arisc_dram_paras.dram_zq = 0x3BBB;
+	arisc_dram_paras.dram_odt_en = 0x1;
+	arisc_dram_paras.dram_para1 = 0x10F20400;
+	arisc_dram_paras.dram_para2 = 0x1000;
+	arisc_dram_paras.dram_mr0 = 0x1C70;
+	arisc_dram_paras.dram_mr1 = 0x40;
+	arisc_dram_paras.dram_mr2 = 0x18;
+	arisc_dram_paras.dram_mr3 = 0x0;
+	arisc_dram_paras.dram_tpr0 = 0x47214F;
+	arisc_dram_paras.dram_tpr1 = 0x1C2294B;
+	arisc_dram_paras.dram_tpr2 = 0x61043;
+	arisc_dram_paras.dram_tpr3 = 0x0;
+	arisc_dram_paras.dram_tpr4 = 0x0;
+	arisc_dram_paras.dram_tpr5 = 0x0;
+	arisc_dram_paras.dram_tpr6 = 0x0;
+	arisc_dram_paras.dram_tpr7 = 0x0;
+	arisc_dram_paras.dram_tpr8 = 0x0;
+	arisc_dram_paras.dram_tpr9 = 0x0;
+	arisc_dram_paras.dram_tpr10 = 0x0;
+	arisc_dram_paras.dram_tpr11 = 0x0;
+	arisc_dram_paras.dram_tpr12 = 0xA8;
+	arisc_dram_paras.dram_tpr13 = 0x10901;
+
 // 	script_item_u val;
 // 	script_item_value_type_e type;
 // 
@@ -264,36 +290,36 @@ static int arisc_get_dram_cfg(void)
 
 int arisc_config_dram_paras(void)
 {
-// 	struct arisc_message *pmessage;
-// 	u32 *dram_para;
-// 	u32 index;
-// 
-// 	/* parse dram config paras */
-// 	arisc_get_dram_cfg();
-// 
-// 	/* update dram config paras to arisc system */
-// 	pmessage = arisc_message_allocate(0);
-// 	if (pmessage == NULL) {
-// 		ARISC_WRN("allocate message failed\n");
-// 		return -ENOMEM;
-// 	}
-// 	dram_para = (u32 *)(&arisc_dram_paras);
-// 	for (index = 0; index < (sizeof(arisc_dram_paras) / 4); index++) {
-// 		/* initialize message */
-// 		pmessage->type       = ARISC_SET_DRAM_PARAS;
-// 		pmessage->attr       = ARISC_MESSAGE_ATTR_HARDSYN;
-// 		pmessage->paras[0]   = index;
-// 		pmessage->paras[1]   = 1;
-// 		pmessage->paras[2]   = dram_para[index];
-// 		pmessage->state      = ARISC_MESSAGE_INITIALIZED;
-// 		pmessage->cb.handler = NULL;
-// 		pmessage->cb.arg     = NULL;
-// 
-// 		/* send message */
-// 		arisc_hwmsgbox_send_message(pmessage, ARISC_SEND_MSG_TIMEOUT);
-// 	}
-// 	/* free message */
-// 	arisc_message_free(pmessage);
+	struct arisc_message *pmessage;
+	u32 *dram_para;
+	u32 index;
+
+	/* parse dram config paras */
+	arisc_get_dram_cfg();
+
+	/* update dram config paras to arisc system */
+	pmessage = arisc_message_allocate(0);
+	if (pmessage == NULL) {
+		ARISC_WRN("allocate message failed\n");
+		return -ENOMEM;
+	}
+	dram_para = (u32 *)(&arisc_dram_paras);
+	for (index = 0; index < (sizeof(arisc_dram_paras) / 4); index++) {
+		/* initialize message */
+		pmessage->type       = ARISC_SET_DRAM_PARAS;
+		pmessage->attr       = ARISC_MESSAGE_ATTR_HARDSYN;
+		pmessage->paras[0]   = index;
+		pmessage->paras[1]   = 1;
+		pmessage->paras[2]   = dram_para[index];
+		pmessage->state      = ARISC_MESSAGE_INITIALIZED;
+		pmessage->cb.handler = NULL;
+		pmessage->cb.arg     = NULL;
+
+		/* send message */
+		arisc_hwmsgbox_send_message(pmessage, ARISC_SEND_MSG_TIMEOUT);
+	}
+	/* free message */
+	arisc_message_free(pmessage);
 
 	return 0;
 }

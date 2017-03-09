@@ -70,6 +70,7 @@ enum psci_function {
 	PSCI_FN_CPU_ON,
 	PSCI_FN_CPU_OFF,
 	PSCI_FN_MIGRATE,
+	PSCI_FN_GET_MMU_SEC_REG,
 	PSCI_FN_MAX,
 };
 
@@ -180,6 +181,15 @@ static int psci_cpu_on(unsigned long cpuid, unsigned long entry_point)
 	fn = psci_function_id[PSCI_FN_CPU_ON];
 	err = invoke_psci_fn(fn, cpuid, entry_point, 0);
 	return psci_to_linux_errno(err);
+}
+
+static int psci_get_mmu_sec_reg(int id) {
+	int err;
+	u32 fn;
+
+	fn = psci_function_id[PSCI_FN_GET_MMU_SEC_REG];
+	err = invoke_psci_fn(fn, id, 0, 0);
+	return err;
 }
 
 static int psci_migrate(unsigned long cpuid)
@@ -609,6 +619,10 @@ static int __init psci_0_1_init(struct device_node *np)
 		psci_function_id[PSCI_FN_MIGRATE] = id;
 		psci_ops.migrate = psci_migrate;
 	}
+
+	// hack in our psci function
+	psci_function_id[PSCI_FN_GET_MMU_SEC_REG] = 0x95c1ba5e + 4;
+	psci_ops.get_mmu_sec_reg = psci_get_mmu_sec_reg;
 
 out_put_node:
 	of_node_put(np);

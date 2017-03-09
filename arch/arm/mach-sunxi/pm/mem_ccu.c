@@ -1,6 +1,7 @@
+#include <asm/io.h>
 #include "pm_types.h"
 #include "pm_i.h"
-
+#include <linux/bug.h>
 
 #if defined(CONFIG_ARCH_SUN8IW1P1)
 static int i = 0;
@@ -447,7 +448,10 @@ __s32 mem_ccu_restore(struct ccm_state *ccm_reg)
 */
 __s32 mem_ccu_save(struct ccm_state *ccm_reg)
 {
-	ccm_reg->ccm_reg = (__ccmu_reg_list_t *)IO_ADDRESS(AW_CCM_BASE);
+	//ccm_reg->ccm_reg = (__ccmu_reg_list_t *)IO_ADDRESS(AW_CCM_BASE);
+	void __iomem *io_ccm_base;
+	io_ccm_base  = ioremap_nocache(AW_CCM_BASE, 0x400);
+	ccm_reg->ccm_reg = (__ccmu_reg_list_t *)io_ccm_base;
 
 	//Pll1Bias;									    //0x220,  pll cpux  bias reg 
 	ccm_reg->ccm_reg_backup.PllAudioBias	= ccm_reg->ccm_reg->PllAudioBias;           //0x224,  pll audio bias reg 
@@ -536,11 +540,16 @@ __s32 mem_ccu_save(struct ccm_state *ccm_reg)
 	ccm_reg->ccm_reg_backup.Apb1Reset	= ccm_reg->ccm_reg->Apb1Reset;
 	ccm_reg->ccm_reg_backup.Apb2Reset	= ccm_reg->ccm_reg->Apb2Reset;
 
+	iounmap(io_ccm_base);
+	ccm_reg->ccm_reg = NULL;
 	return 0;
 }
 
 __s32 mem_ccu_restore(struct ccm_state *ccm_reg)
 {
+	void __iomem *io_ccm_base;
+	io_ccm_base  = ioremap_nocache(AW_CCM_BASE, 0x400);
+	ccm_reg->ccm_reg = (__ccmu_reg_list_t *)io_ccm_base;
 	
 	//Pll1Bias;										//0x220,  pll cpux  bias reg 
 	ccm_reg->ccm_reg->PllAudioBias   	= ccm_reg->ccm_reg_backup.PllAudioBias;         //0x224,  pll audio bias reg 
@@ -636,6 +645,8 @@ __s32 mem_ccu_restore(struct ccm_state *ccm_reg)
 	ccm_reg->ccm_reg->Apb1Gate     	= ccm_reg->ccm_reg_backup.Apb1Gate;
 	ccm_reg->ccm_reg->Apb2Gate     	= ccm_reg->ccm_reg_backup.Apb2Gate;
 
+	iounmap(io_ccm_base);
+	ccm_reg->ccm_reg = NULL;
 	return 0;
 }
 #endif

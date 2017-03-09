@@ -1075,16 +1075,6 @@ static int  sunxi_arisc_clk_cfg(struct platform_device *pdev)
 
 static int  sunxi_arisc_pin_cfg(struct platform_device *pdev)
 {
-	void __iomem *iop;
-	u32 val;
-
-	// Set PL2 and PL3 to be the r_uart pins
-	iop = ioremap_nocache(0x01f02c00, 0x30);
-	val = ioread32(iop);
-	val = val & 0xFFFF00FF;
-	val = val | 0x00002200;
-	iowrite32(val, iop);
-	iounmap(iop);
 // 	script_item_u script_val;
 // 	script_item_value_type_e type;
 // 	script_item_u  *pin_list;
@@ -1229,6 +1219,17 @@ static int  sunxi_arisc_pin_cfg(struct platform_device *pdev)
 // 
 // 	ARISC_INF("device [%s] pin resource request ok\n", dev_name(&pdev->dev));
 
+	void __iomem *iop;
+	u32 val;
+
+	// Set PL2 and PL3 to be the r_uart pins
+	iop = ioremap_nocache(0x01f02c00, 0x30);
+	val = ioread32(iop);
+	val = val & 0xFFFF00FF;
+	val = val | 0x00002200;
+	iowrite32(val, iop);
+	iounmap(iop);
+
 	return 0;
 }
 
@@ -1236,18 +1237,17 @@ static int  sunxi_arisc_probe(struct platform_device *pdev)
 {
 	int binary_len;
 	int ret;
-early_printk("**************************************************\n");
-early_printk("    ARISC PROBE\n");
-early_printk("**************************************************\n");
 	ARISC_INF("arisc initialize\n");
 
-early_printk("arisc skipping initialize clocks!\n");
-// 	/* cfg sunxi arisc clk */
-// 	ret = sunxi_arisc_clk_cfg(pdev);
-// 	if (ret) {
-// 		ARISC_ERR("sunxi-arisc clk cfg failed\n");
-// 		return -EINVAL;
-// 	}
+
+
+	early_printk("arisc skipping initialize clocks!\n");
+	// /* cfg sunxi arisc clk */
+	// ret = sunxi_arisc_clk_cfg(pdev);
+	// if (ret) {
+	// 	ARISC_ERR("sunxi-arisc clk cfg failed\n");
+	// 	return -EINVAL;
+	// }
 
 	/* cfg sunxi arisc pin */
 	ret = sunxi_arisc_pin_cfg(pdev);
@@ -1264,14 +1264,16 @@ early_printk("arisc skipping initialize clocks!\n");
 	binary_len = (int)(&arisc_binary_end) - (int)(&arisc_binary_start);
 #endif
 	/* clear sram_a2 area */
-//	memset((void *)arisc_sram_a2_vbase, 0, SUNXI_SRAM_A2_SIZE);
+	// memset((void *)arisc_sram_a2_vbase, 0, SUNXI_SRAM_A2_SIZE);
 	/* load arisc system binary data to sram_a2 */
-//	memcpy((void *)arisc_sram_a2_vbase, (void *)(&arisc_binary_start), binary_len);
+	// memcpy((void *)arisc_sram_a2_vbase, (void *)(&arisc_binary_start), binary_len);
 	{
 		void __iomem *iop;
+		char *cp;
 		iop = ioremap(SUNXI_SRAM_A2_PBASE, SUNXI_SRAM_A2_SIZE);
 		memset((void *)iop, 0, SUNXI_SRAM_A2_SIZE);
 		memcpy((void *)iop, (void *)(&arisc_binary_start), binary_len);
+		cp = iop;
 		iounmap(iop);
 	}
 	ARISC_INF("move arisc binary data [addr = %x, len = %x] to sram_a2 finished\n",
@@ -1294,12 +1296,12 @@ early_printk("arisc skipping initialize clocks!\n");
 #if (defined CONFIG_ARCH_SUN8IW1P1) || (defined CONFIG_ARCH_SUN8IW3P1) || (defined CONFIG_ARCH_SUN8IW5P1) || (defined CONFIG_ARCH_SUN8IW6P1)
 	{
 		volatile unsigned long value;
-//		value = readl((IO_ADDRESS(SUNXI_R_CPUCFG_PBASE) + 0x0));
-//		value &= ~1;
-//		writel(value, (IO_ADDRESS(SUNXI_R_CPUCFG_PBASE) + 0x0));
-//		value = readl((IO_ADDRESS(SUNXI_R_CPUCFG_PBASE) + 0x0));
-//		value |= 1;
-//		writel(value, (IO_ADDRESS(SUNXI_R_CPUCFG_PBASE) + 0x0));
+	//	value = readl((IO_ADDRESS(SUNXI_R_CPUCFG_PBASE) + 0x0));
+	//	value &= ~1;
+	//	writel(value, (IO_ADDRESS(SUNXI_R_CPUCFG_PBASE) + 0x0));
+	//	value = readl((IO_ADDRESS(SUNXI_R_CPUCFG_PBASE) + 0x0));
+	//	value |= 1;
+	//	writel(value, (IO_ADDRESS(SUNXI_R_CPUCFG_PBASE) + 0x0));
 		void __iomem *iop;
 		iop = ioremap(SUNXI_R_CPUCFG_PBASE, 0x10);
 		value = readl(iop);
@@ -1328,7 +1330,7 @@ early_printk("arisc skipping initialize clocks!\n");
 		ARISC_LOG("arisc startup failed\n");
 	}
 	arisc_set_uart_baudrate(arisc_debug_baudrate);
-
+	
 	/* enable arisc asyn tx interrupt */
 	arisc_hwmsgbox_enable_receiver_int(ARISC_HWMSGBOX_ARISC_ASYN_TX_CH, AW_HWMSG_QUEUE_USER_AC327);
 
@@ -1336,33 +1338,33 @@ early_printk("arisc skipping initialize clocks!\n");
 	arisc_hwmsgbox_enable_receiver_int(ARISC_HWMSGBOX_ARISC_SYN_TX_CH, AW_HWMSG_QUEUE_USER_AC327);
 
 	/* config dvfs v-f table */
-// 	if (arisc_dvfs_cfg_vf_table()) {
-// 		ARISC_WRN("config dvfs v-f table failed\n");
-// 	}
+	// if (arisc_dvfs_cfg_vf_table()) {
+	// 	ARISC_WRN("config dvfs v-f table failed\n");
+	// }
 
 #if (defined CONFIG_ARCH_SUN8IW1P1) || (defined CONFIG_ARCH_SUN8IW6P1) || (defined CONFIG_ARCH_SUN9IW1P1)
 	/* config ir config paras */
-// 	if (arisc_config_ir_paras()) {
-// 		ARISC_WRN("config ir paras failed\n");
-// 	}
+	if (arisc_config_ir_paras()) {
+		ARISC_WRN("config ir paras failed\n");
+	}
 #endif
 
 #if (defined CONFIG_ARCH_SUN8IW1P1) || (defined CONFIG_ARCH_SUN8IW3P1) || (defined CONFIG_ARCH_SUN8IW5P1)
 	/* config pmu config paras */
-// 	if (arisc_config_pmu_paras()) {
-// 		ARISC_WRN("config pmu paras failed\n");
-// 	}
+	// if (arisc_config_pmu_paras()) {
+	// 	ARISC_WRN("config pmu paras failed\n");
+	// }
 #endif
 
 	/* config dram config paras */
-// 	if (arisc_config_dram_paras()) {
-// 		ARISC_WRN("config dram paras failed\n");
-// 	}
+	if (arisc_config_dram_paras()) {
+		ARISC_WRN("config dram paras failed\n");
+	}
 #if (defined CONFIG_ARCH_SUN8IW5P1) || (defined CONFIG_ARCH_SUN9IW1P1)
 	/* config standby power paras */
-// 	if (arisc_sysconfig_sstpower_paras()) {
-// 		ARISC_WRN("config sst power paras failed\n");
-// 	}
+	if (arisc_sysconfig_sstpower_paras()) {
+		ARISC_WRN("config sst power paras failed\n");
+	}
 #endif
 	atomic_set(&arisc_suspend_flag, 0);
 
@@ -1370,13 +1372,13 @@ early_printk("arisc skipping initialize clocks!\n");
 	 * detect sunxi chip id
 	 * include soc chip id, pmu chip id and serial.
 	 */
-//	sunxi_chip_id_init();
+	// sunxi_chip_id_init();
 
 	/* arisc initialize succeeded */
 	ARISC_LOG("sunxi-arisc driver v%s startup succeeded\n", DRV_VERSION);
 
-//	sunxi_arisc_sysfs(&sunxi_arisc_device);
 	sunxi_arisc_sysfs(pdev);
+
 	/* arisc init ok */
 	arisc_notify(ARISC_INIT_READY, NULL);
 

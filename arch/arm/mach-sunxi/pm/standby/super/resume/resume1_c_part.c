@@ -1,6 +1,7 @@
 /* these code will be removed to sram.
  * function: open the mmu, and jump to dram, for continuing resume*/
 #include "./../super_i.h"
+#include <linux/types.h>
 
 
 struct aw_mem_para mem_para_info;
@@ -48,7 +49,7 @@ int resume1_c_part(void)
 
 #ifdef SET_COPRO_REG
 	save_mem_status_nommu(RESUME1_START |0x07);
-	set_copro_default();
+	set_copro_default_nonsec();
 #endif
 
 #ifdef MMU_OPENED
@@ -75,37 +76,66 @@ int resume1_c_part(void)
 		serial_puts_nommu("resume1: 1. before restore mmu. \n");
 	}
 
+	// Add physical mapping to mmu for debug purposes
+	((__u32*)(mem_para_info.saved_mmu_state.ttb_1r & 0xFFFFC000))[0x1c] = 0x1C11452;
+	((__u32*)(mem_para_info.saved_mmu_state.ttb_1r & 0xFFFFC000))[0x1d] = 0x1d11452;
+	((__u32*)(mem_para_info.saved_mmu_state.ttb_1r & 0xFFFFC000))[0x1e] = 0x1e11452;
+	((__u32*)(mem_para_info.saved_mmu_state.ttb_1r & 0xFFFFC000))[0x1f] = 0x1f11452;
+
 	/*restore mmu configuration*/
 	save_mem_status_nommu(RESUME1_START |0x09);
 	//save_mem_status(RESUME1_START |0x09);
 
 	//after restore mmu, u need to re-init reg base address.
 	restore_mmu_state(&(mem_para_info.saved_mmu_state));
-	save_mem_status(RESUME1_START |0xA);
+	// in order for jtag break points to work, uncomment line below in order to open up DACR
+	// asm volatile ("mcr p15, 0, %0, c3, c0, 0" : : "r"(0xFFFFFFFF));
+//	save_mem_status(RESUME1_START |0xA);
+	save_mem_status_nommu(RESUME1_START |0xA);
 
 #endif
 
 //before jump to late_resume	
 #ifdef FLUSH_TLB
-	save_mem_status(RESUME1_START |0xb);
+//	save_mem_status(RESUME1_START |0xb);
+	save_mem_status_nommu(RESUME1_START |0xb);
 	mem_flush_tlb();
 #endif
 
 #ifdef FLUSH_ICACHE
-	save_mem_status(RESUME1_START |0xc);
+//	save_mem_status(RESUME1_START |0xc);
+	save_mem_status_nommu(RESUME1_START |0xc);
 	flush_icache();
 #endif
 	mem_clk_init(1);
+
+	// Uncomment if we need to wait for toggle switch for jtag
+// 	// enable jtag
+// 	*(volatile unsigned long *)0x01c208b4 = 0x373733;
+// 	// set PE6 to be input 
+// 	*(volatile __u32*)(0x1c20890) = *(volatile __u32*)(0x1c20890) & ~(0x7 << 24);
+// 	// enable pullup on PE6
+// 	*(volatile __u32*)(0x1c208AC) = *(volatile __u32*)(0x1c208AC) & ~(0x3 << 12) | (1 << 12);
+// 	{
+// 		int debouncer = 0;
+// 		serial_puts_nommu("waiting for go switch!\n");
+// 		while (debouncer < 50) {
+// 			if ((*(volatile __u32*)(0x1c208A0) & 0x40) == 0)	debouncer++;
+// 		}
+// 		serial_puts_nommu("ready to go!\n");
+// 	}
+
 	if(unlikely(mem_para_info.debug_mask&PM_STANDBY_PRINT_RESUME)){
-		serial_puts("resume1: 3. after restore mmu, before jump.\n");
+//		serial_puts("resume1: 3. after restore mmu, before jump.\n");
+		serial_puts_nommu("resume1: 3. after restore mmu, before jump.\n");
 	}
 
-	save_mem_status(RESUME1_START |0xe);
+//	save_mem_status(RESUME1_START |0xe);
+	save_mem_status_nommu(RESUME1_START |0xe);
 	jump_to_resume((void *)mem_para_info.resume_pointer, mem_para_info.saved_runtime_context_svc);
 
 	return 0;
 }
-
 
 /*******************************************************************************
 * interface : set_pll
@@ -349,3 +379,53 @@ void set_pll( void )
 }
 
 
+// This exception handler does initial setup for monitor mode
+// (asm wrapper has already setup the secure stack)
+void exception_handler_mon_setup_smc(void) {
+	// Variables
+	__u32 i;
+	
+	// setup the serial port	
+	mem_clk_init(0);
+	serial_init_nommu();
+	
+	// Enable UART0 pins b for sinlinx
+	*(__u32*)(0x1c20824) = ((*(__u32*)(0x1c20824)) & ~0xFF) | 0x33;
+	printk_nommu("Initializing secure mode\n");
+	
+	// setup the coprocessor defaults (this will reset the mvbar and vbar)
+	set_copro_default();
+
+	// Fix the  Non-Secure Access Control Register so c10 and c11 can be accessed from the non-secure state
+	asm volatile ("mcr p15, 0, %0, c1, c1, 2" : : "r"(0xC00)); //?
+
+	// setup the GIC so all interrupts are in group 1 (non-secure)
+	*(volatile __u32*)(0x01c81080) = 0xFFFFFFFF;
+	*(volatile __u32*)(0x01c81084) = 0xFFFFFFFF;
+	*(volatile __u32*)(0x01c81088) = 0xFFFFFFFF;
+	*(volatile __u32*)(0x01c8108C) = 0xFFFFFFFF;
+	
+	// Enable group0 and group 1 interrupts
+	*(volatile __u32*)(0x01c81000) = 0x3;
+	
+	// Setup GIC priority
+	*(volatile __u32*)(0x01c82004) = 0xF0;
+
+	// copy the mem_para_info
+	mem_memcpy((void *)&mem_para_info, (void *)(DRAM_MEM_PARA_INFO_PA), sizeof(mem_para_info));
+	
+	// Restore and enable the MMU to normal state
+	restore_mmu_state(&(mem_para_info.saved_mmu_state));
+	
+	// Overlay the secure state ontop of the normal state
+	restore_mmu_state_sec(&(mem_para_info.saved_mmu_state_sec));
+	
+	// debug msg
+	printk_nommu("Secure state setup complete!\n");
+	
+	// load the uboot mvbar
+	asm volatile ("mcr p15, 0, %0, c12, c0, 1" : : "r"(mem_para_info.mvbar));
+
+	// return (asm wrapper will switch to non-secure state)
+	return;
+}

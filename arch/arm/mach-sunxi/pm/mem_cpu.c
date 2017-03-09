@@ -11,6 +11,7 @@
  */
 #include "pm_types.h"
 #include "./pm.h"
+#include <linux/psci.h>
 
 unsigned long saved_context_r13_sys[SYS_CONTEXT_SIZE];
 unsigned long saved_cpsr_svc;
@@ -252,7 +253,9 @@ void __save_processor_state(struct saved_context *ctxt)
 	asm volatile ("mrc p15, 0, %0, c12, c1, 1" : "=r"(ctxt->vir));
 #elif defined(CORTEX_A7)
 	asm volatile ("mrc p15, 0, %0, c12, c0, 0" : "=r"(ctxt->vbar));
-	asm volatile ("mrc p15, 0, %0, c12, c0, 1" : "=r"(ctxt->mvbar));
+	// asm volatile ("mrc p15, 0, %0, c12, c0, 1" : "=r"(ctxt->mvbar));
+	ctxt->mvbar = psci_ops.get_mmu_sec_reg(6);
+	// The one below is supposed to be commented out
 	//asm volatile ("mrc p15, 0, %0, c12, c1, 0" : "=r"(ctxt->isr));
 #endif
 
@@ -351,7 +354,9 @@ void __restore_processor_state(struct saved_context *ctxt)
 	asm volatile ("mcr p15, 0, %0, c12, c1, 1" : : "r"(ctxt->vir));
 #elif defined(CORTEX_A7)
 	asm volatile ("mcr p15, 0, %0, c12, c0, 0" : : "r"(ctxt->vbar));
-	asm volatile ("mcr p15, 0, %0, c12, c0, 1" : : "r"(ctxt->mvbar));
+	// mvbar is restored by the secure setup
+	// asm volatile ("mcr p15, 0, %0, c12, c0, 1" : : "r"(ctxt->mvbar));
+	// The one below is supposed to be commented out
 	//asm volatile ("mcr p15, 0, %0, c12, c1, 0" : : "r"(ctxt->isr));
 #endif
 

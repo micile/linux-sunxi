@@ -22,7 +22,7 @@
 #include "../pm.h"
 
 #include <linux/power/aw_pm.h>
-#include <mach/platform.h>
+//#include <mach/platform.h>
 
 #include "standby_cfg.h"
 #include "common.h"

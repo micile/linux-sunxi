@@ -22,6 +22,6 @@ typedef unsigned long long  __u64;
 #endif 
 
 typedef unsigned int		size_t;
-typedef unsigned int		ptrdiff_t;
+//typedef unsigned int		ptrdiff_t;
 
 #endif /*_PM_TYPES_H*/

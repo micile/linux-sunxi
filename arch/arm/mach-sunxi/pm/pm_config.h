@@ -10,12 +10,19 @@
 * the Free Software Foundation.
 */
 
+#define CONFIG_ARCH_SUN8IW5P1
+#define CONFIG_ARCH_SUN8I
+#define CONFIG_EVB_PLATFORM
+#define SUNXI_PIO_BASE		0x01c20800
+#define SUNXI_R_PIO_BASE	0x01f02c00
+#define SUNXI_CCM_BASE		0x01c20000
+
 #include "pm_def_i.h"
-#include "mach/platform.h"
-#include "mach/memory.h"
+#include "../include/mach/platform.h"
+#include "../include/mach/memory.h"
 #include "asm-generic/sizes.h"
 //#include <generated/autoconf.h>
-#include "mach/irqs.h"
+#include "../include/mach/irqs.h"
 
 //#define CHECK_IC_VERSION
 

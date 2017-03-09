@@ -15,7 +15,6 @@
 * Update  : date                auther      ver     notes
 *********************************************************************************************************
 */
-
 #include <linux/module.h>
 #include <linux/suspend.h>
 #include <linux/cpufreq.h>
@@ -37,7 +36,9 @@
 #include "pm_o.h"
 #include <linux/arisc/arisc.h>
 
-#include <mach/sys_config.h>
+// #include <mach/sys_config.h>
+#include <asm/io.h>
+#include <linux/psci.h>
 #include <linux/power/scenelock.h>
 
 //#define CROSS_MAPPING_STANDBY
@@ -80,8 +81,11 @@ static int suspend_freq = SUSPEND_FREQ;
 static int suspend_delay_ms = SUSPEND_DELAY_MS;
 static unsigned long time_to_wakeup = 0;
 
-extern char *standby_bin_start;
-extern char *standby_bin_end;
+//extern char *standby_bin_start;
+//extern char *standby_bin_end;
+// These are declared in standby.S but we don't compile the standby code so we have to hack it
+char *standby_bin_start;
+char *standby_bin_end;
 extern char *suspend_bin_start;
 extern char *suspend_bin_end;
 
@@ -158,6 +162,22 @@ struct aw_mem_para mem_para_info;
 struct super_standby_para super_standby_para_info;
 static const extended_standby_manager_t *extended_standby_manager_id = NULL;
 
+#define PM_SUSPEND_BOOTFAST     ((__force suspend_state_t) 7)
+#define PM_SUSPEND_MAX          ((__force suspend_state_t) 8)
+
+typedef enum{
+        NON_STANDBY = 0,
+        NORMAL_STANDBY = 1,
+        SUPER_STANDBY = 3
+}standby_type_e;
+
+typedef enum{
+        STANDBY_INITIAL = 0,
+        STANDBY_WITH_POWER = 1,
+        STANDBY_WITH_POWER_OFF = 2
+}standby_level_e;
+extern standby_level_e standby_level;
+
 standby_type_e standby_type = NON_STANDBY;
 EXPORT_SYMBOL(standby_type);
 standby_level_e standby_level = STANDBY_INITIAL;
@@ -170,6 +190,28 @@ static int suspend_status_flag = 0;
 #ifdef	CONFIG_AW_AXP22
 extern void axp_powerkey_set(int value);
 #endif
+
+static void serial_put_char_nommu(char c)
+{
+	u32 usr;
+
+	usr = *(volatile __u32*)(0x01C28000 + 0x7c);
+	while ((usr & 2) == 0) {
+		usr = *(volatile __u32*)(0x01C28000 + 0x7c);
+	}
+	*(volatile __u32*)(0x01C28000) = c;
+	return	;
+}
+
+void save_mmu_state_sec(struct mmu_state *saved_mmu_state)
+{
+	saved_mmu_state->cssr   = psci_ops.get_mmu_sec_reg(0);	// cssr BANKED
+	saved_mmu_state->dacr   = psci_ops.get_mmu_sec_reg(1);	// dacr BANKED
+	saved_mmu_state->ttb_0r = psci_ops.get_mmu_sec_reg(2);	// ttbr0 BANKED
+	saved_mmu_state->ttb_1r = psci_ops.get_mmu_sec_reg(3);	// ttbr1 BANKED
+	saved_mmu_state->ttbcr  = psci_ops.get_mmu_sec_reg(4);	// ttbrc BANKED
+	saved_mmu_state->cr     = psci_ops.get_mmu_sec_reg(5);	// cssr BANKED
+}
 
 /*
 *********************************************************************************************************
@@ -190,10 +232,6 @@ static int aw_pm_valid(suspend_state_t state)
 #ifdef CHECK_IC_VERSION
 	enum sw_ic_ver version = MAGIC_VER_NULL;
 #endif
-
-printk("**** DUMP STACK SHOULD BE CALLED HERE!\n");
-dump_stack();
-
 
     PM_DBG("valid\n");
 
@@ -229,8 +267,7 @@ dump_stack();
 
 #if defined(CONFIG_ARCH_SUN9IW1P1) || defined(CONFIG_ARCH_SUN8IW5P1) || defined(CONFIG_ARCH_SUN8IW6P1)
 	if(NORMAL_STANDBY == standby_type){
-		printk("ASDF!\n");
-		printk("Notice2: sun9i&sun8iw5 not need support normal standby, \
+		printk("Notice: sun9i&sun8iw5 not need support normal standby, \
 				change to super standby.\n");
 
 		standby_type = SUPER_STANDBY;
@@ -363,24 +400,29 @@ static int aw_pm_prepare(void)
 */
 static int aw_pm_prepare_late(void)
 {
-#ifdef CONFIG_CPU_FREQ	
-    struct cpufreq_policy policy;
-#endif
-    PM_DBG("prepare_late\n");
-
-#ifdef CONFIG_CPU_FREQ	
-    if (cpufreq_get_policy(&policy, 0))
-	goto out;
-	
-    cpufreq_driver_target(&policy, suspend_freq, CPUFREQ_RELATION_L);
-#endif
+	printk("**** aw_pm_prepare_late PROBLEM WITH CPU FREQ POLICY!\n");
+	printk("**** aw_pm_prepare_late PROBLEM WITH CPU FREQ POLICY!\n");
+	printk("**** aw_pm_prepare_late PROBLEM WITH CPU FREQ POLICY!\n");
+	printk("**** aw_pm_prepare_late PROBLEM WITH CPU FREQ POLICY!\n");
+	printk("**** aw_pm_prepare_late PROBLEM WITH CPU FREQ POLICY!\n");
+// #ifdef CONFIG_CPU_FREQ	
+//     struct cpufreq_policy policy;
+// #endif
+//     PM_DBG("prepare_late\n");
+// 
+// #ifdef CONFIG_CPU_FREQ	
+//     if (cpufreq_get_policy(&policy, 0))
+// 	goto out;
+// 	
+//     cpufreq_driver_target(&policy, suspend_freq, CPUFREQ_RELATION_L);
+// #endif
     save_mem_status(BEFORE_EARLY_SUSPEND |0xd);
     return 0;
-
-#ifdef CONFIG_CPU_FREQ	
-out:
-    return -1;
-#endif
+// 
+// #ifdef CONFIG_CPU_FREQ	
+// out:
+//     return -1;
+// #endif
 }
 
 static int aw_suspend_cpu_die(void)
@@ -480,6 +522,12 @@ static int aw_early_suspend(void)
 
 	//backup mmu
 	save_mmu_state(&(mem_para_info.saved_mmu_state));
+	
+	// backup the secure mmu
+	save_mmu_state_sec(&(mem_para_info.saved_mmu_state_sec));
+	
+	// save the mvbar
+	mem_para_info.mvbar = psci_ops.get_mmu_sec_reg(6);
 
 	//backup 0x0000,0000 page entry, size?
 	save_mapping(MEM_SW_VA_SRAM_BASE);
@@ -657,22 +705,22 @@ static int aw_super_standby(suspend_state_t state)
 
 mem_enter:
 	if( 1 == mem_para_info.mem_flag){
-		save_mem_status(BEFORE_LATE_RESUME |0x1);
+		save_mem_status_nommu(BEFORE_LATE_RESUME |0x1);
 		//print_call_info();
 		invalidate_branch_predictor();
 		//print_call_info();
 		//must be called to invalidate I-cache inner shareable?
 		// I+BTB cache invalidate
 		__cpuc_flush_icache_all();
-		save_mem_status(BEFORE_LATE_RESUME |0x2);
+		save_mem_status_nommu(BEFORE_LATE_RESUME |0x2);
 		//print_call_info();
 		//disable 0x0000 <---> 0x0000 mapping
-		save_mem_status(BEFORE_LATE_RESUME |0x3);
+		save_mem_status_nommu(BEFORE_LATE_RESUME |0x3);
 		restore_processor_state();
 		//destroy 0x0000 <---> 0x0000 mapping
-		save_mem_status(BEFORE_LATE_RESUME |0x4);
+		save_mem_status_nommu(BEFORE_LATE_RESUME |0x4);
 		restore_mapping(MEM_SW_VA_SRAM_BASE);
-		save_mem_status(BEFORE_LATE_RESUME |0x5);
+		save_mem_status_nommu(BEFORE_LATE_RESUME |0x5);
 		mem_arch_resume();
 		save_mem_status(BEFORE_LATE_RESUME |0x6);
 		goto resume;
@@ -682,6 +730,10 @@ mem_enter:
 	mem_para_info.mem_flag = 1;
 	standby_level = STANDBY_WITH_POWER_OFF;
 	mem_para_info.resume_pointer = (void *)&&mem_enter;
+
+	// No idea why, but we need this printk here
+	printk("Hangs without this printk\n");
+	
 	mem_para_info.debug_mask = debug_mask;
 	mem_para_info.suspend_delay_ms = suspend_delay_ms;
 	if(unlikely(debug_mask&PM_STANDBY_PRINT_STANDBY)){
@@ -754,6 +806,9 @@ static int aw_pm_enter(suspend_state_t state)
 {
 	int (*standby)(struct aw_pm_info *arg);
 	int i = 0;
+	void __iomem *io_pio_base;
+	void __iomem *io_rpio_base;
+	void __iomem *io_ccm_base;
 
 #ifdef CONFIG_ARCH_SUN8IW3P1
 	int val = 0;
@@ -776,29 +831,45 @@ static int aw_pm_enter(suspend_state_t state)
 	writel(val,SRAM_CTRL_REG1_ADDR_VA);
 #endif
 
+	// newer kernels need ioremap to access io registers
+	io_pio_base  = ioremap_nocache(SUNXI_PIO_BASE,   GPIO_REG_LENGTH * 4);
+	io_rpio_base = ioremap_nocache(SUNXI_R_PIO_BASE, CPUS_GPIO_REG_LENGTH * 4);
+	io_ccm_base  = ioremap_nocache(SUNXI_CCM_BASE,   CCU_REG_LENGTH * 4);		
+		
 	if(unlikely(debug_mask&PM_STANDBY_PRINT_IO_STATUS)){
 		printk(KERN_INFO "IO status as follow:");
-		for(i=0; i<(GPIO_REG_LENGTH); i++){
+		for(i=0; i<(GPIO_REG_LENGTH); i++){		
+// 			printk(KERN_INFO "ADDR = %x, value = %x .\n", \
+// 				(volatile __u32)(IO_ADDRESS(AW_PIO_BASE) + i*0x04), *(volatile __u32 *)(IO_ADDRESS(AW_PIO_BASE) + i*0x04));
 			printk(KERN_INFO "ADDR = %x, value = %x .\n", \
-				(volatile __u32)(IO_ADDRESS(AW_PIO_BASE) + i*0x04), *(volatile __u32 *)(IO_ADDRESS(AW_PIO_BASE) + i*0x04));
+				(volatile __u32)(SUNXI_PIO_BASE + i*0x04), *(volatile __u32 *)(io_pio_base + i*0x04));
 		}
 	}
 
 	if(unlikely(debug_mask&PM_STANDBY_PRINT_CPUS_IO_STATUS)){
 		printk(KERN_INFO "CPUS IO status as follow:");
 		for(i=0; i<(CPUS_GPIO_REG_LENGTH); i++){
+// 			printk(KERN_INFO "ADDR = %x, value = %x .\n", \
+// 				(volatile __u32)(IO_ADDRESS(AW_R_PIO_BASE) + i*0x04), *(volatile __u32 *)(IO_ADDRESS(AW_R_PIO_BASE) + i*0x04));
 			printk(KERN_INFO "ADDR = %x, value = %x .\n", \
-				(volatile __u32)(IO_ADDRESS(AW_R_PIO_BASE) + i*0x04), *(volatile __u32 *)(IO_ADDRESS(AW_R_PIO_BASE) + i*0x04));
+				(volatile __u32)(SUNXI_R_PIO_BASE + i*0x04), *(volatile __u32 *)(io_rpio_base + i*0x04));
 		}
 	}
 
 	if(unlikely(debug_mask&PM_STANDBY_PRINT_CCU_STATUS)){
 		printk(KERN_INFO "CCU status as follow:");
 		for(i=0; i<(CCU_REG_LENGTH); i++){
+// 			printk(KERN_INFO "ADDR = %x, value = %x .\n", \
+// 				(volatile __u32)(IO_ADDRESS(AW_CCM_BASE) + i*0x04), *(volatile __u32 *)(IO_ADDRESS(AW_CCM_BASE) + i*0x04));
 			printk(KERN_INFO "ADDR = %x, value = %x .\n", \
-				(volatile __u32)(IO_ADDRESS(AW_CCM_BASE) + i*0x04), *(volatile __u32 *)(IO_ADDRESS(AW_CCM_BASE) + i*0x04));
+				(volatile __u32)(SUNXI_CCM_BASE + i*0x04), *(volatile __u32 *)(io_ccm_base + i*0x04));
 		}
 	}
+
+	// clean up the mapped io registers
+	iounmap(io_pio_base);
+	iounmap(io_rpio_base);
+	iounmap(io_ccm_base);
 
 	extended_standby_manager_id = get_extended_standby_manager();
 	extended_standby_show_state();
@@ -853,6 +924,8 @@ static int aw_pm_enter(suspend_state_t state)
 #ifdef CONFIG_SUNXI_ARISC
 		arisc_cpux_ready_notify();
 		arisc_query_wakeup_source((unsigned long *)(&(mem_para_info.axp_event)));
+		// No idea why, but hangs without the printk below
+		printk("No idea why, but hangs without this prink\n");
 #else
 		#warning "ARISC driver is not enabled!!!!!!!!!"
 #endif
@@ -865,24 +938,30 @@ static int aw_pm_enter(suspend_state_t state)
 		if(unlikely(debug_mask&PM_STANDBY_PRINT_IO_STATUS)){
 		    printk(KERN_INFO "IO status as follow:");
 		    for(i=0; i<(GPIO_REG_LENGTH); i++){
+// 			printk(KERN_INFO "ADDR = %x, value = %x .\n", \
+// 				(volatile __u32)(IO_ADDRESS(AW_PIO_BASE) + i*0x04), *(volatile __u32 *)(IO_ADDRESS(AW_PIO_BASE) + i*0x04));
 			printk(KERN_INFO "ADDR = %x, value = %x .\n", \
-				(volatile __u32)(IO_ADDRESS(AW_PIO_BASE) + i*0x04), *(volatile __u32 *)(IO_ADDRESS(AW_PIO_BASE) + i*0x04));
+				(volatile __u32)(SUNXI_PIO_BASE + i*0x04), *(volatile __u32 *)(io_pio_base + i*0x04));
 		    }
 		}
 
 		if(unlikely(debug_mask&PM_STANDBY_PRINT_CPUS_IO_STATUS)){
 		    printk(KERN_INFO "CPUS IO status as follow:");
 		    for(i=0; i<(CPUS_GPIO_REG_LENGTH); i++){
+// 			printk(KERN_INFO "ADDR = %x, value = %x .\n", \
+// 				(volatile __u32)(IO_ADDRESS(AW_R_PIO_BASE) + i*0x04), *(volatile __u32 *)(IO_ADDRESS(AW_R_PIO_BASE) + i*0x04));
 			printk(KERN_INFO "ADDR = %x, value = %x .\n", \
-				(volatile __u32)(IO_ADDRESS(AW_R_PIO_BASE) + i*0x04), *(volatile __u32 *)(IO_ADDRESS(AW_R_PIO_BASE) + i*0x04));
+				(volatile __u32)(SUNXI_R_PIO_BASE + i*0x04), *(volatile __u32 *)(io_rpio_base + i*0x04));
 		    }
 		}
 
 		if(unlikely(debug_mask&PM_STANDBY_PRINT_CCU_STATUS)){
 		    printk(KERN_INFO "CCU status as follow:");
 		    for(i=0; i<(CCU_REG_LENGTH); i++){
+// 			printk(KERN_INFO "ADDR = %x, value = %x .\n", \
+// 				(volatile __u32)(IO_ADDRESS(AW_CCM_BASE) + i*0x04), *(volatile __u32 *)(IO_ADDRESS(AW_CCM_BASE) + i*0x04));
 			printk(KERN_INFO "ADDR = %x, value = %x .\n", \
-				(volatile __u32)(IO_ADDRESS(AW_CCM_BASE) + i*0x04), *(volatile __u32 *)(IO_ADDRESS(AW_CCM_BASE) + i*0x04));
+				(volatile __u32)(SUNXI_CCM_BASE + i*0x04), *(volatile __u32 *)(io_ccm_base + i*0x04));
 		    }
 		}
 	}
@@ -891,6 +970,11 @@ static int aw_pm_enter(suspend_state_t state)
 //#if 0
 	writel(sram_backup,SRAM_CTRL_REG1_ADDR_VA);
 #endif
+
+	// clean up the mapped io registers
+	iounmap(io_pio_base);
+	iounmap(io_rpio_base);
+	iounmap(io_ccm_base);
 
 	return 0;
 }
@@ -933,24 +1017,29 @@ static void aw_pm_wake(void)
 */
 static void aw_pm_finish(void)
 {
-#ifdef CONFIG_CPU_FREQ	
-    struct cpufreq_policy policy;
-#endif
+	printk("**** aw_pm_finish PROBLEM WITH CPU FREQ POLICY!\n");
+	printk("**** aw_pm_finish PROBLEM WITH CPU FREQ POLICY!\n");
+	printk("**** aw_pm_finish PROBLEM WITH CPU FREQ POLICY!\n");
+	printk("**** aw_pm_finish PROBLEM WITH CPU FREQ POLICY!\n");
+	printk("**** aw_pm_finish PROBLEM WITH CPU FREQ POLICY!\n");
+// #ifdef CONFIG_CPU_FREQ	
+//     struct cpufreq_policy policy;
+// #endif
     save_mem_status(AFTER_LATE_RESUME |0x2);
     PM_DBG("platform wakeup finish\n");
-
-#ifdef CONFIG_CPU_FREQ	
-    if (cpufreq_get_policy(&policy, 0))
-	goto out;
-
-    cpufreq_driver_target(&policy, policy.max, CPUFREQ_RELATION_L);
-#endif
-    return ;
-
-#ifdef CONFIG_CPU_FREQ	
-out:
-    return ;
-#endif
+// 
+// #ifdef CONFIG_CPU_FREQ	
+//     if (cpufreq_get_policy(&policy, 0))
+// 	goto out;
+// 
+//     cpufreq_driver_target(&policy, policy.max, CPUFREQ_RELATION_L);
+// #endif
+//     return ;
+// 
+// #ifdef CONFIG_CPU_FREQ	
+// out:
+//     return ;
+// #endif
 }
 
 
@@ -1037,39 +1126,39 @@ static struct platform_suspend_ops aw_pm_ops = {
 */
 static int __init aw_pm_init(void)
 {
-	script_item_u item;
-	script_item_u   *list = NULL;
+// 	script_item_u item;
+// 	script_item_u   *list = NULL;
 	int wakeup_src_cnt = 0;
 	unsigned gpio = 0;
 	int i = 0;
 	
 	PM_DBG("aw_pm_init!\n");
 
-	//get standby_mode.
-	if(SCIRPT_ITEM_VALUE_TYPE_INT != script_get_item("pm_para", "standby_mode", &item)){
-		pr_err("%s: script_parser_fetch err. \n", __func__);
-		standby_mode = 0;
-		//standby_mode = 1;
-		pr_err("notice: standby_mode = %d.\n", standby_mode);
-	}else{
-		standby_mode = item.val;
-		pr_info("standby_mode = %d. \n", standby_mode);
-		if(1 != standby_mode){
-			pr_err("%s: not support super standby. \n",  __func__);
-		}
-	}
-
-	//get wakeup_src_cnt
-	wakeup_src_cnt = script_get_pio_list("wakeup_src_para",&list);
-	pr_info("wakeup src cnt is : %d. \n", wakeup_src_cnt);
-
-	//script_dump_mainkey("wakeup_src_para");
-	if(0 != wakeup_src_cnt){
-		while(wakeup_src_cnt--){
-			gpio = (list + (i++) )->gpio.gpio;
-			extended_standby_enable_wakeup_src(CPUS_GPIO_SRC, gpio);
-		}
-	}
+// 	//get standby_mode.
+// 	if(SCIRPT_ITEM_VALUE_TYPE_INT != script_get_item("pm_para", "standby_mode", &item)){
+// 		pr_err("%s: script_parser_fetch err. \n", __func__);
+// 		standby_mode = 0;
+// 		//standby_mode = 1;
+// 		pr_err("notice: standby_mode = %d.\n", standby_mode);
+// 	}else{
+// 		standby_mode = item.val;
+// 		pr_info("standby_mode = %d. \n", standby_mode);
+// 		if(1 != standby_mode){
+// 			pr_err("%s: not support super standby. \n",  __func__);
+// 		}
+// 	}
+// 
+// 	//get wakeup_src_cnt
+// 	wakeup_src_cnt = script_get_pio_list("wakeup_src_para",&list);
+// 	pr_info("wakeup src cnt is : %d. \n", wakeup_src_cnt);
+// 
+// 	//script_dump_mainkey("wakeup_src_para");
+// 	if(0 != wakeup_src_cnt){
+// 		while(wakeup_src_cnt--){
+// 			gpio = (list + (i++) )->gpio.gpio;
+// 			extended_standby_enable_wakeup_src(CPUS_GPIO_SRC, gpio);
+// 		}
+// 	}
 
 	/*init debug state*/
 	mem_status_init(); 

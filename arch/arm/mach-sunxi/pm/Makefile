@@ -1,9 +1,9 @@
-#use "-Os" flags.
-use-flags := -Os
-#Don't use "-O2" flags.
-not-use-flags := -O2
-KBUILD_CFLAGS := $(filter-out $(not-use-flags), $(KBUILD_CFLAGS))
-KBUILD_CFLAGS += $(use-flags)
+# #use "-Os" flags.
+# use-flags := -Os
+# #Don't use "-O2" flags.
+# not-use-flags := -O2
+# KBUILD_CFLAGS := $(filter-out $(not-use-flags), $(KBUILD_CFLAGS))
+# KBUILD_CFLAGS += $(use-flags)
 
 subdir- += standby
 obj-y	 += pm_tmp.o 
@@ -32,8 +32,8 @@ pm_tmp-y :=	mem_mapping.o               \
 		standby/super/super_power.o \
 		standby/super/super_twi.o   \
 		standby/super/super_clock.o \
-		standby.o		    \
 		mem.o
+#		standby.o		    \
 
 $(obj)/mem_mapping.o              : $(obj)/pm_tmp_xx.o
 $(obj)/mem_divlibc.o              : $(obj)/pm_tmp_xx.o
@@ -62,10 +62,9 @@ $(obj)/standby/super/super_twi.o  : $(obj)/pm_tmp_xx.o
 $(obj)/standby/super/super_clock.o: $(obj)/pm_tmp_xx.o
 $(obj)/mem.o			  : $(obj)/pm_tmp_xx.o	
 
-$(obj)/pm_tmp_xx.o			: $(obj)/standby/super/resume/resume1.code $(obj)/standby/standby.code FORCE
-$(obj)/standby.o			: $(obj)/standby/standby.code FORCE
-$(obj)/standby/super/resume/resume1.code: $(obj)/standby/standby.code FORCE
+$(obj)/pm_tmp_xx.o			: $(obj)/standby/super/resume/resume1.code FORCE
+#$(obj)/standby.o			: $(obj)/standby/standby.code FORCE
+#$(obj)/standby/super/resume/resume1.code: $(obj)/standby/standby.code FORCE
 
-$(obj)/standby/standby.code: FORCE
+$(obj)/standby/super/resume/resume1.code: FORCE
 	$(Q)$(MAKE) $(build)=$(obj)/standby
-	

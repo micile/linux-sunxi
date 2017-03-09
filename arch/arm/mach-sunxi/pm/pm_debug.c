@@ -1,3 +1,5 @@
+//#include <linux/module.h>
+#include <asm/io.h>
 #include "pm_i.h"
 
 //for io-measure time
@@ -199,7 +201,12 @@ void mem_status_exit(void)
 
 void save_mem_status(volatile __u32 val)
 {
-	*(volatile __u32 *)(STANDBY_STATUS_REG  + 0x04) = val;
+	// *(volatile __u32 *)(STANDBY_STATUS_REG  + 0x04) = val;
+	void __iomem *iop;
+	iop = ioremap_nocache(STANDBY_STATUS_REG_PA, 0x10);
+	iowrite32(val, iop);
+	iounmap(iop);
+
 	asm volatile ("dsb");
 	asm volatile ("isb");
 	return;
@@ -207,7 +214,11 @@ void save_mem_status(volatile __u32 val)
 
 __u32 get_mem_status(void)
 {
-	return *(volatile __u32 *)(STANDBY_STATUS_REG  + 0x04);
+	//return *(volatile __u32 *)(STANDBY_STATUS_REG  + 0x04);
+	void __iomem *io_standby_status_reg = ioremap_nocache(STANDBY_STATUS_REG  + 0x04, 4);
+	__u32 retval = *(__u32*)io_standby_status_reg;
+	iounmap(io_standby_status_reg);
+	return retval;
 }
 
 void show_mem_status(void)

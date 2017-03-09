@@ -1,3 +1,4 @@
+#include <asm/io.h>
 #include "pm_i.h"
 
 //#define CHECK_RESTORE_STATUS
@@ -20,12 +21,13 @@ static __ccmu_reg_list_t   *CmuReg;
 */
 __ccmu_reg_list_t * mem_clk_init(__u32 mmu_flag )
 {
-	if(1 == mmu_flag){
-		CmuReg = (__ccmu_reg_list_t *)IO_ADDRESS(AW_CCM_BASE);
-	}else{
-		CmuReg = (__ccmu_reg_list_t *)(AW_CCM_BASE);
-	}
-
+// 	if(1 == mmu_flag){
+// 		CmuReg = (__ccmu_reg_list_t *)IO_ADDRESS(AW_CCM_BASE);
+// 	}else{
+// 		CmuReg = (__ccmu_reg_list_t *)(AW_CCM_BASE);
+// 	}
+//
+	CmuReg = NULL;
 	return CmuReg;
 }
 
@@ -45,7 +47,6 @@ __ccmu_reg_list_t * mem_clk_init(__u32 mmu_flag )
 */
 __ccmu_reg_list_t * mem_get_ba(void)
 {
-
 	return CmuReg;
 }
 
@@ -68,13 +69,17 @@ static __ccmu_sysclk_ratio_reg0050_t	CmuReg_SysClkDiv_tmp;
 */
 __s32 mem_clk_save(struct clk_state *pclk_state)
 {
-	pclk_state->CmuReg = CmuReg = (__ccmu_reg_list_t *)IO_ADDRESS(AW_CCM_BASE);
+//	pclk_state->CmuReg = CmuReg = (__ccmu_reg_list_t *)IO_ADDRESS(AW_CCM_BASE);
+	void __iomem *io_ccm_base = ioremap_nocache(AW_CCM_BASE, 0x400);
+	CmuReg = (__ccmu_reg_list_t *)io_ccm_base;
 
 	/*backup clk src and ldo*/
 	pclk_state->ccu_reg_back[0] = *(volatile __u32 *)&CmuReg->SysClkDiv;
 	pclk_state->ccu_reg_back[1] = *(volatile __u32 *)&CmuReg->Apb2Div;
 	pclk_state->ccu_reg_back[2] = *(volatile __u32 *)&CmuReg->Ahb1Div;
-	
+	iounmap(io_ccm_base);
+	CmuReg = NULL;
+	pclk_state->CmuReg = NULL;
 	return 0;
 }
 
@@ -96,7 +101,9 @@ __s32 mem_clk_save(struct clk_state *pclk_state)
 __s32 mem_clk_restore(struct clk_state *pclk_state)
 {
 	/* initialise the CCU io base */
-	CmuReg = pclk_state->CmuReg;
+//	CmuReg = pclk_state->CmuReg;
+	void __iomem *io_ccm_base = ioremap_nocache(AW_CCM_BASE, 0x400);
+	CmuReg = (__ccmu_reg_list_t *)io_ccm_base;
 
 	/* 
 	* consider: pll6 already configed.
@@ -108,6 +115,8 @@ __s32 mem_clk_restore(struct clk_state *pclk_state)
 	*(volatile __u32 *)&CmuReg->Apb2Div     = pclk_state->ccu_reg_back[1];  
 	*(volatile __u32 *)&CmuReg->Ahb1Div     = pclk_state->ccu_reg_back[2];
 
+	iounmap(io_ccm_base);
+	CmuReg = NULL;
 	return 0;
 }
 
@@ -125,11 +134,14 @@ __s32 mem_clk_restore(struct clk_state *pclk_state)
 */
 __s32 mem_clk_setdiv(struct clk_div_t *clk_div)
 {
+	void __iomem *io_ccm_base;
 	if(!clk_div){
 		return -1;
 	}
 
-	CmuReg = (__ccmu_reg_list_t *)(AW_CCM_BASE);
+//	CmuReg = (__ccmu_reg_list_t *)(AW_CCM_BASE);
+	io_ccm_base = ioremap_nocache(AW_CCM_BASE, 0x400);
+	CmuReg = (__ccmu_reg_list_t *)io_ccm_base;
 	
 	//1st: set axi ratio
 	CmuReg_SysClkDiv_tmp.dwval = CmuReg->SysClkDiv.dwval;
@@ -145,6 +157,8 @@ __s32 mem_clk_setdiv(struct clk_div_t *clk_div)
 	//notice: pll6 is enabled by cpus.
 	//the relationship between pll6&mbus&dram?
 
+	iounmap(io_ccm_base);
+	CmuReg = NULL;
 	return 0;
 }
 
@@ -161,14 +175,18 @@ __s32 mem_clk_setdiv(struct clk_div_t *clk_div)
 */
 __s32 mem_clk_getdiv(struct clk_div_t  *clk_div)
 {
+	void __iomem *io_ccm_base = ioremap_nocache(SUNXI_CCM_BASE,   CCU_REG_LENGTH * 4);
 	if(!clk_div){
 		return -1;
 	}
-	CmuReg = (__ccmu_reg_list_t *)IO_ADDRESS(AW_CCM_BASE);
+//	CmuReg = (__ccmu_reg_list_t *)IO_ADDRESS(AW_CCM_BASE);
+	CmuReg = (__ccmu_reg_list_t *)io_ccm_base;
 	CmuReg_SysClkDiv_tmp.dwval = CmuReg->SysClkDiv.dwval;
 	clk_div->axi_div = CmuReg_SysClkDiv_tmp.bits.AXIClkDiv;
 	clk_div->ahb_apb_div = *(volatile __u32 *)(&CmuReg->Ahb1Div);
 	
+	iounmap(io_ccm_base);
+	CmuReg = NULL;
 	return 0;
 }
 
@@ -187,7 +205,10 @@ __s32 mem_clk_getdiv(struct clk_div_t  *clk_div)
 
 __s32 mem_clk_set_pll_factor(struct pll_factor_t *pll_factor)
 {
-	CmuReg = (__ccmu_reg_list_t *)(AW_CCM_BASE);
+//	CmuReg = (__ccmu_reg_list_t *)(AW_CCM_BASE);
+	void __iomem *io_ccm_base = ioremap_nocache(SUNXI_CCM_BASE, CCU_REG_LENGTH * 4);
+	CmuReg = (__ccmu_reg_list_t *)io_ccm_base;
+
 	CmuReg_Pll1Ctl_tmp.dwval = CmuReg->Pll1Ctl.dwval;
 	//set pll factor: notice: when raise freq, N must be the last to set
 #if defined(CONFIG_ARCH_SUN8IW3P1) || defined(CONFIG_ARCH_SUN8IW5P1) || defined(CONFIG_ARCH_SUN8IW6P1)
@@ -202,6 +223,8 @@ __s32 mem_clk_set_pll_factor(struct pll_factor_t *pll_factor)
 	//need delay?
 	//busy_waiting();
 	
+	iounmap(io_ccm_base);
+	CmuReg = NULL;
 	return 0;
 }
 
@@ -219,7 +242,9 @@ __s32 mem_clk_set_pll_factor(struct pll_factor_t *pll_factor)
 
 __s32 mem_clk_get_pll_factor(struct pll_factor_t *pll_factor)
 {
-	CmuReg = (__ccmu_reg_list_t *)IO_ADDRESS(AW_CCM_BASE);
+//	CmuReg = (__ccmu_reg_list_t *)IO_ADDRESS(AW_CCM_BASE);
+	void __iomem *io_ccm_base = ioremap_nocache(SUNXI_CCM_BASE, CCU_REG_LENGTH * 4);
+	CmuReg = (__ccmu_reg_list_t *)io_ccm_base;
 	CmuReg_Pll1Ctl_tmp.dwval = CmuReg->Pll1Ctl.dwval;
 	pll_factor->FactorN = CmuReg_Pll1Ctl_tmp.bits.FactorN;
 #ifndef CONFIG_ARCH_SUN8IW6P1
@@ -232,6 +257,8 @@ __s32 mem_clk_get_pll_factor(struct pll_factor_t *pll_factor)
 #endif
 	//busy_waiting();
 	
+	iounmap(io_ccm_base);
+	CmuReg = NULL;
 	return 0;
 }
 
@@ -248,7 +275,9 @@ __s32 mem_clk_get_pll_factor(struct pll_factor_t *pll_factor)
 */
 __s32 mem_clk_set_misc(struct clk_misc_t *clk_misc)
 {
-	CmuReg = (__ccmu_reg_list_t *)(AW_CCM_BASE);
+	void __iomem *io_ccm_base = ioremap_nocache(SUNXI_CCM_BASE,   CCU_REG_LENGTH * 4);
+//	CmuReg = (__ccmu_reg_list_t *)(AW_CCM_BASE);
+	CmuReg = (__ccmu_reg_list_t *)io_ccm_base;
 	
 	CmuReg->PllxBias[0]	= clk_misc->pll1_bias;
 	
@@ -275,6 +304,8 @@ __s32 mem_clk_set_misc(struct clk_misc_t *clk_misc)
 	CmuReg_SysClkDiv_tmp.dwval = CmuReg->SysClkDiv.dwval;
 	CmuReg_SysClkDiv_tmp.bits.AXIClkDiv = 1;
 	CmuReg->SysClkDiv.dwval = CmuReg_SysClkDiv_tmp.dwval;
+	iounmap(io_ccm_base);
+	CmuReg = NULL;
 	return 0;
 }
 
@@ -292,7 +323,9 @@ __s32 mem_clk_set_misc(struct clk_misc_t *clk_misc)
 
 __s32 mem_clk_get_misc(struct clk_misc_t *clk_misc)
 {
-	CmuReg = (__ccmu_reg_list_t *)IO_ADDRESS(AW_CCM_BASE);
+	void __iomem *io_ccm_base = ioremap_nocache(SUNXI_CCM_BASE,   CCU_REG_LENGTH * 4);
+//	CmuReg = (__ccmu_reg_list_t *)IO_ADDRESS(AW_CCM_BASE);
+	CmuReg = (__ccmu_reg_list_t *)io_ccm_base;
 	clk_misc->pll1_bias	=	CmuReg->PllxBias[0];	 
 	clk_misc->pll1_tun	=	CmuReg->Pll1Tun;	
 
@@ -312,6 +345,8 @@ __s32 mem_clk_get_misc(struct clk_misc_t *clk_misc)
 #endif	
 
 	//busy_waiting();
+	iounmap(io_ccm_base);
+	CmuReg = NULL;
 	return 0;
 }
 
@@ -329,6 +364,8 @@ __s32 mem_clk_get_misc(struct clk_misc_t *clk_misc)
 */
 __u32 mem_clk_get_cpu_freq(void)
 {
+	void __iomem *io_ccm_base = ioremap_nocache(SUNXI_CCM_BASE,   CCU_REG_LENGTH * 4);
+	CmuReg = (__ccmu_reg_list_t *)io_ccm_base;
 	__u32 FactorN = 1;
 	__u32 FactorK = 1;
 	__u32 FactorM = 1;
@@ -354,6 +391,8 @@ __u32 mem_clk_get_cpu_freq(void)
 	//printk("cpu_freq = dec(%d). \n", cpu_freq);
 	//busy_waiting();
 
+	iounmap(io_ccm_base);
+	CmuReg = NULL;
 	return cpu_freq;
 }
 
@@ -361,6 +400,8 @@ __u32 mem_clk_get_cpu_freq(void)
 
 __u32 mem_clk_get_cpu_freq(void)
 {
+	void __iomem *io_ccm_base = ioremap_nocache(SUNXI_CCM_BASE,   CCU_REG_LENGTH * 4);
+	CmuReg = (__ccmu_reg_list_t *)io_ccm_base;
 	__u32 FactorN = 1;
 	__u32 FactorK = 1;
 	__u32 FactorM = 1;
@@ -392,6 +433,8 @@ __u32 mem_clk_get_cpu_freq(void)
 	//printk("cpu_freq = dec(%d). \n", cpu_freq);
 	//busy_waiting();
 
+	iounmap(io_ccm_base);
+	CmuReg = NULL;
 	return cpu_freq;
 }
 #endif
