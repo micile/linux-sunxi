@@ -64,6 +64,8 @@ static __dram_para_t arisc_dram_paras;
 
 static int arisc_get_dram_cfg(void)
 {
+/*
+	// These are dram settings for SINA-33
 	printk("***** SUPER HACK!!! THE DRAM PARAMS ARE HARDCODED FOR SINLINX SINA-33!\n");
 	arisc_dram_paras.dram_clk = 0x228;
 	arisc_dram_paras.dram_type = 0x3;
@@ -89,6 +91,32 @@ static int arisc_get_dram_cfg(void)
 	arisc_dram_paras.dram_tpr11 = 0x0;
 	arisc_dram_paras.dram_tpr12 = 0xA8;
 	arisc_dram_paras.dram_tpr13 = 0x10901;
+*/
+	// These are dram settings for GA10H v1.1 A33 A33G6
+	arisc_dram_paras.dram_clk = 480;
+	arisc_dram_paras.dram_type = 3;
+	arisc_dram_paras.dram_zq = 0x3bbb;
+	arisc_dram_paras.dram_odt_en = 1;
+	arisc_dram_paras.dram_para1 = 285344768;
+	arisc_dram_paras.dram_para2 = 16;
+	arisc_dram_paras.dram_mr0 = 7280;
+	arisc_dram_paras.dram_mr1 = 64;
+	arisc_dram_paras.dram_mr2 = 24;
+	arisc_dram_paras.dram_mr3 = 0;
+	arisc_dram_paras.dram_tpr0 = 0x46210c;
+	arisc_dram_paras.dram_tpr1 = 0x1c2210a;
+	arisc_dram_paras.dram_tpr2 = 0x5403a;
+	arisc_dram_paras.dram_tpr3 = 0x0;
+	arisc_dram_paras.dram_tpr4 = 0x0;
+	arisc_dram_paras.dram_tpr5 = 0x0;
+	arisc_dram_paras.dram_tpr6 = 0x0;
+	arisc_dram_paras.dram_tpr7 = 0x0;
+	arisc_dram_paras.dram_tpr8 = 0x0;
+	arisc_dram_paras.dram_tpr9 = 0x0;
+	arisc_dram_paras.dram_tpr10 = 0x0;
+	arisc_dram_paras.dram_tpr11 = 0x0;
+	arisc_dram_paras.dram_tpr12 = 0xa8;
+	arisc_dram_paras.dram_tpr13 = 0x901;
 
 // 	script_item_u val;
 // 	script_item_value_type_e type;

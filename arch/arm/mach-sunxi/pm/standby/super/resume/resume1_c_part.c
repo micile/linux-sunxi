@@ -390,7 +390,12 @@ void exception_handler_mon_setup_smc(void) {
 	serial_init_nommu();
 	
 	// Enable UART0 pins b for sinlinx
-	*(__u32*)(0x1c20824) = ((*(__u32*)(0x1c20824)) & ~0xFF) | 0x33;
+	// *(__u32*)(0x1c20824) = ((*(__u32*)(0x1c20824)) & ~0xFF) | 0x33;
+
+	// Enable R_UART pins for A33 tablet
+	*(__u32*)(0x1f02c00) = ((*(__u32*)(0x1f02c00)) & ~0xFF00) | 0x2200;
+
+	// Debug msg
 	printk_nommu("Initializing secure mode\n");
 	
 	// setup the coprocessor defaults (this will reset the mvbar and vbar)

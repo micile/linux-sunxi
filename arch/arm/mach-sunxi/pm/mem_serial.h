@@ -19,8 +19,12 @@
 #define __MEM_SERIAL_H__
 #include "pm.h"
 
+// For Sinlinx SINA33
+// #define SUART_BASE_PA	(SUNXI_UART0_PBASE)
 
-#define SUART_BASE_PA	(SUNXI_UART0_PBASE)
+// For A33 Tablets using R_UART
+#define SUART_BASE_PA	(SUNXI_R_UART_PBASE)
+
 #define SUART_BASE_VA	IO_ADDRESS(SUART_BASE_PA)
 
 #define SUART_RBR_PA	(SUART_BASE_PA + 0x00)
