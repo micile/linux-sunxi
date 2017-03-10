@@ -829,6 +829,7 @@ CONFIG_HAVE_CBPF_JIT=y
 #
 # Device Drivers
 #
+CONFIG_SUNXI_ARISC=y
 
 #
 # Generic Driver Options
