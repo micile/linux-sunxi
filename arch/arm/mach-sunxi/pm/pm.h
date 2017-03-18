@@ -226,6 +226,18 @@ struct sram_state{
 	__u32 sram_reg_back[SRAM_REG_LENGTH];
 };
 
+struct tcon_state{
+	__u32 tcon_reg_back[TCON_REG_LENGTH];
+};
+
+struct defe_state{
+	__u32 defe_reg_back[DEFE_REG_LENGTH];
+};
+
+struct debe_state{
+	__u32 debe_reg_back[DEBE_REG_LENGTH];
+};
+
 //save module state
 __s32 mem_twi_save(struct twi_state *ptwi_state);
 __s32 mem_twi_restore(struct twi_state *ptwi_state);
@@ -235,6 +247,15 @@ __s32 mem_sram_save(struct sram_state *psram_state);
 __s32 mem_sram_restore(struct sram_state *psram_state);
 __s32 mem_ccu_save(struct ccm_state *ccm_reg);
 __s32 mem_ccu_restore(struct ccm_state *ccm_reg);
+__s32 mem_tcon_save(struct tcon_state *ptcon_state);
+__s32 mem_tcon_restore(struct tcon_state *ptcon_state);
+
+__s32 mem_defe_save(struct defe_state *pdefe_state);
+__s32 mem_defe_restore(struct defe_state *pdefe_state);
+
+__s32 mem_debe_save(struct debe_state *pdebe_state);
+__s32 mem_debe_restore(struct debe_state *pdebe_state);
+
 
 extern struct aw_mem_para mem_para_info;
 extern struct super_standby_para super_standby_para_info;

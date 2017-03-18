@@ -122,6 +122,9 @@ static struct twi_state saved_twi_state;
 static struct gpio_state saved_gpio_state;
 static struct sram_state saved_sram_state;
 static struct ccm_state  saved_ccm_state;
+static struct tcon_state saved_tcon_state;
+static struct defe_state saved_defe_state;
+static struct debe_state saved_debe_state;
 
 #ifdef CONFIG_ARCH_SUN9IW1P1
 static struct cci400_state saved_cci400_state;
@@ -486,6 +489,9 @@ static int aw_early_suspend(void)
 	mem_tmr_save(&(saved_tmr_state));
 	mem_twi_save(&(saved_twi_state));
 	mem_sram_save(&(saved_sram_state));
+	mem_tcon_save(&(saved_tcon_state));
+	mem_defe_save(&(saved_defe_state));
+	mem_debe_save(&(saved_debe_state));
 
 #if 0
 	//backup volt and freq state, after backup device state
@@ -674,6 +680,9 @@ static void aw_late_resume(void)
 	save_mem_status(LATE_RESUME_START |0x3);
 	//mem_int_restore(&(saved_gic_state));
 	mem_sram_restore(&(saved_sram_state));
+	mem_tcon_restore(&(saved_tcon_state));
+	mem_defe_restore(&(saved_defe_state));
+	mem_debe_restore(&(saved_debe_state));
 	save_mem_status(LATE_RESUME_START |0x4);
 #ifdef CONFIG_ARCH_SUN9IW1P1	
 	mem_gtbus_restore(&(saved_gtbus_state));

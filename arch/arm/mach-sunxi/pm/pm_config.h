@@ -16,6 +16,9 @@
 #define SUNXI_PIO_BASE		0x01c20800
 #define SUNXI_R_PIO_BASE	0x01f02c00
 #define SUNXI_CCM_BASE		0x01c20000
+#define SUNXI_TCON_BASE		0x01C0C000
+#define SUNXI_DEFE_BASE		0x01E00000
+#define SUNXI_DEBE_BASE		0x01E60000
 
 #include "pm_def_i.h"
 #include "../include/mach/platform.h"
@@ -160,6 +163,9 @@
 #define CPUS_GPIO_REG_LENGTH	((0x218+0x4)>>2)
 #define SRAM_REG_LENGTH		((0xa4+0x4)>>2)
 #define CCU_REG_LENGTH		((0x2d8+0x4)>>2)
+#define TCON_REG_LENGTH		((0x7fC+0x4)>>2)
+#define DEFE_REG_LENGTH		((0x77C+0x4)>>2)
+#define DEBE_REG_LENGTH		((0x9FC+0x4)>>2)
 #elif defined CONFIG_ARCH_SUN8IW6P1
 #define AW_LRADC01_BASE		(0x0)				//notice: fake addr
 #define AW_CCM_BASE		(SUNXI_CCM_PBASE)

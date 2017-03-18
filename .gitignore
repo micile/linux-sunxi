@@ -116,3 +116,5 @@ all.config
 *.kdev4
 
 /lib_kernel
+/arch/arm/mach-sunxi/pm/standby/resume1.map
+/arch/arm/mach-sunxi/pm/standby/super/resume/resume1.code

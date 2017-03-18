@@ -24,6 +24,7 @@ pm_tmp-y :=	mem_mapping.o               \
 		mem_ccu.o                   \
 		mem_cci400.o                \
 		mem_gtbus.o                 \
+		mem_tcon.o                  \
 		pm_debug.o                  \
 		mem_timing.o                \
 		mem_hwspinlock.o              \
@@ -49,6 +50,7 @@ $(obj)/mem_twi.o                  : $(obj)/pm_tmp_xx.o
 $(obj)/mem_gpio.o                 : $(obj)/pm_tmp_xx.o
 $(obj)/mem_serial.o               : $(obj)/pm_tmp_xx.o
 $(obj)/mem_sram.o                 : $(obj)/pm_tmp_xx.o
+$(obj)/mem_tcon.o                 : $(obj)/pm_tmp_xx.o
 $(obj)/mem_ccu.o                  : $(obj)/pm_tmp_xx.o
 $(obj)/mem_cci400.o               : $(obj)/pm_tmp_xx.o
 $(obj)/mem_gtbus.o                : $(obj)/pm_tmp_xx.o
