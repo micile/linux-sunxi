@@ -214,8 +214,12 @@ struct gic_state{
 };
 
 struct twi_state{
-	__mem_twic_reg_t *twi_reg;
-	__u32 twi_reg_backup[7];
+//	__mem_twic_reg_t *twi_reg;
+//	__u32 twi_reg_backup[7];
+	__u32 twi0_reg_back[TWI_REG_LENGTH];
+	__u32 twi1_reg_back[TWI_REG_LENGTH];
+	__u32 twi2_reg_back[TWI_REG_LENGTH];
+
 };
 
 struct gpio_state{

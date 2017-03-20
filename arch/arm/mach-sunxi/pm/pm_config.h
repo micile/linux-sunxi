@@ -166,6 +166,7 @@
 #define TCON_REG_LENGTH		((0x7fC+0x4)>>2)
 #define DEFE_REG_LENGTH		((0x77C+0x4)>>2)
 #define DEBE_REG_LENGTH		((0x9FC+0x4)>>2)
+#define TWI_REG_LENGTH		((0x020+0x4)>>2)
 #elif defined CONFIG_ARCH_SUN8IW6P1
 #define AW_LRADC01_BASE		(0x0)				//notice: fake addr
 #define AW_CCM_BASE		(SUNXI_CCM_PBASE)
