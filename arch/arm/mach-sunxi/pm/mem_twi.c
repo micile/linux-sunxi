@@ -70,8 +70,8 @@ __s32 mem_twi_restore(struct twi_state *ptwi_state)
 	/*restore all the twi reg*/
 	for(i=0; i<(TWI_REG_LENGTH); i++){
 		iowrite32(ptwi_state->twi0_reg_back[i], io_twi0_base + i*0x04);
-		printk("RESTORING %d = 0x%X\n", i*0x04, ptwi_state->twi0_reg_back[i]);
-		printk("VERIFYING %d = 0x%x\n", i*0x04, ioread32(io_twi0_base + i*0x04));
+		//printk("RESTORING %d = 0x%X\n", i*0x04, ptwi_state->twi0_reg_back[i]);
+		//printk("VERIFYING %d = 0x%x\n", i*0x04, ioread32(io_twi0_base + i*0x04));
 		iowrite32(ptwi_state->twi1_reg_back[i], io_twi1_base + i*0x04);
 		iowrite32(ptwi_state->twi2_reg_back[i], io_twi2_base + i*0x04);
 	}
