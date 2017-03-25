@@ -311,6 +311,10 @@ static int sunxi_mmc_init_host(struct mmc_host *mmc)
 	u32 rval;
 	struct sunxi_mmc_host *host = mmc_priv(mmc);
 
+	// We need to add a delay or else the mmc clk won't resume reliably after a suspend
+	printk("sunxi_mmc_init_host needs this delay inserted in order for a resume from suspend to operate properly.\n");
+	msleep(100);
+
 	if (sunxi_mmc_reset_host(host))
 		return -EIO;
 
@@ -438,6 +442,8 @@ static void sunxi_mmc_send_manual_stop(struct sunxi_mmc_host *host,
 {
 	u32 arg, cmd_val, ri;
 	unsigned long expire = jiffies + msecs_to_jiffies(1000);
+
+printk("MMC %s %d \n",__FUNCTION__,__LINE__);
 
 	cmd_val = SDXC_START | SDXC_RESP_EXPIRE |
 		  SDXC_STOP_ABORT_CMD | SDXC_CHECK_RESPONSE_CRC;
@@ -619,6 +625,8 @@ static irqreturn_t sunxi_mmc_handle_manual_stop(int irq, void *dev_id)
 	struct mmc_request *mrq;
 	unsigned long iflags;
 
+printk("MMC %s %d \n",__FUNCTION__,__LINE__);
+
 	spin_lock_irqsave(&host->lock, iflags);
 	mrq = host->manual_stop_mrq;
 	spin_unlock_irqrestore(&host->lock, iflags);
@@ -653,6 +661,8 @@ static int sunxi_mmc_oclk_onoff(struct sunxi_mmc_host *host, u32 oclk_en)
 {
 	unsigned long expire = jiffies + msecs_to_jiffies(750);
 	u32 rval;
+	void __iomem *io_pio_base;
+	u32 x;
 
 	rval = mmc_readl(host, REG_CLKCR);
 	rval &= ~(SDXC_CARD_CLOCK_ON | SDXC_LOW_POWER_ON);
@@ -774,6 +784,8 @@ static int sunxi_mmc_clk_set_rate(struct sunxi_mmc_host *host,
 	}
 	dev_dbg(mmc_dev(host->mmc), "setting clk to %d, rounded %ld\n",
 		clock, rate);
+//	dev_err(mmc_dev(host->mmc), "setting clk to %d, rounded %ld\n",
+//		clock, rate);
 
 	/* setting clock rate */
 	ret = clk_set_rate(host->clk_mmc, rate);
@@ -919,6 +931,9 @@ static void sunxi_mmc_enable_sdio_irq(struct mmc_host *mmc, int enable)
 static void sunxi_mmc_hw_reset(struct mmc_host *mmc)
 {
 	struct sunxi_mmc_host *host = mmc_priv(mmc);
+
+printk("MMC %s %d \n",__FUNCTION__,__LINE__);
+	
 	mmc_writel(host, REG_HWRST, 0);
 	udelay(10);
 	mmc_writel(host, REG_HWRST, 1);
@@ -1101,12 +1116,15 @@ static int sunxi_mmc_resource_request(struct sunxi_mmc_host *host,
 {
 	int ret;
 
+printk("MMC %s %d \n",__FUNCTION__,__LINE__);
+
 	host->cfg = of_device_get_match_data(&pdev->dev);
 	if (!host->cfg)
 		return -EINVAL;
 
 	ret = mmc_regulator_get_supply(host->mmc);
 	if (ret) {
+		dev_err(&pdev->dev, "**** sunxi_mmc_resource_request -- mmc_regulator_get_supply failed\n");
 		if (ret != -EPROBE_DEFER)
 			dev_err(&pdev->dev, "Could not get vmmc supply\n");
 		return ret;
@@ -1114,8 +1132,10 @@ static int sunxi_mmc_resource_request(struct sunxi_mmc_host *host,
 
 	host->reg_base = devm_ioremap_resource(&pdev->dev,
 			      platform_get_resource(pdev, IORESOURCE_MEM, 0));
-	if (IS_ERR(host->reg_base))
+	if (IS_ERR(host->reg_base)) {
+		dev_err(&pdev->dev, "**** sunxi_mmc_resource_request -- devm_ioremap_resource failed\n");	
 		return PTR_ERR(host->reg_base);
+	}
 
 	host->clk_ahb = devm_clk_get(&pdev->dev, "ahb");
 	if (IS_ERR(host->clk_ahb)) {
@@ -1144,8 +1164,10 @@ static int sunxi_mmc_resource_request(struct sunxi_mmc_host *host,
 	}
 
 	host->reset = devm_reset_control_get_optional(&pdev->dev, "ahb");
-	if (PTR_ERR(host->reset) == -EPROBE_DEFER)
+	if (PTR_ERR(host->reset) == -EPROBE_DEFER) {
+		dev_err(&pdev->dev, "**** sunxi_mmc_resource_request -- devm_reset_control_get_optional failed\n");		
 		return PTR_ERR(host->reset);
+	}
 
 	ret = clk_prepare_enable(host->clk_ahb);
 	if (ret) {
@@ -1184,8 +1206,10 @@ static int sunxi_mmc_resource_request(struct sunxi_mmc_host *host,
 	 * make sure the controller is in a sane state before enabling irqs.
 	 */
 	ret = sunxi_mmc_reset_host(host);
-	if (ret)
+	if (ret) {
+		dev_err(&pdev->dev, "**** sunxi_mmc_resource_request -- sunxi_mmc_reset_host failed\n");			
 		goto error_assert_reset;
+	}
 
 	host->irq = platform_get_irq(pdev, 0);
 	return devm_request_threaded_irq(&pdev->dev, host->irq, sunxi_mmc_irq,
@@ -1202,6 +1226,7 @@ error_disable_clk_mmc:
 	clk_disable_unprepare(host->clk_mmc);
 error_disable_clk_ahb:
 	clk_disable_unprepare(host->clk_ahb);
+	dev_err(&pdev->dev, "**** sunxi_mmc_resource_request -- FINISHED!\n");			
 	return ret;
 }
 
@@ -1211,6 +1236,7 @@ static int sunxi_mmc_probe(struct platform_device *pdev)
 	struct mmc_host *mmc;
 	int ret;
 
+printk("MMC %s %d \n",__FUNCTION__,__LINE__);
 	mmc = mmc_alloc_host(sizeof(struct sunxi_mmc_host), &pdev->dev);
 	if (!mmc) {
 		dev_err(&pdev->dev, "mmc alloc host failed\n");
@@ -1222,8 +1248,11 @@ static int sunxi_mmc_probe(struct platform_device *pdev)
 	spin_lock_init(&host->lock);
 
 	ret = sunxi_mmc_resource_request(host, pdev);
-	if (ret)
+	if (ret) {
+		dev_err(&pdev->dev, "**** sunxi_mmc_resource_request returned with error %d\n", ret);
+	
 		goto error_free_host;
+	}
 
 	host->sg_cpu = dma_alloc_coherent(&pdev->dev, PAGE_SIZE,
 					  &host->sg_dma, GFP_KERNEL);
@@ -1249,15 +1278,23 @@ static int sunxi_mmc_probe(struct platform_device *pdev)
 		mmc->caps      |= MMC_CAP_1_8V_DDR;
 
 	ret = mmc_of_parse(mmc);
-	if (ret)
+	if (ret) {
+		dev_err(&pdev->dev, "mmc_of_parse failed %d\n", ret);	
 		goto error_free_dma;
+	}
 
 	ret = mmc_add_host(mmc);
-	if (ret)
+	if (ret) {
+		dev_err(&pdev->dev, "mmc_add_host %d\n", ret);		
 		goto error_free_dma;
+	}
 
 	dev_info(&pdev->dev, "base:0x%p irq:%u\n", host->reg_base, host->irq);
+	dev_err(&pdev->dev, "base:0x%p irq:%u\n", host->reg_base, host->irq);
 	platform_set_drvdata(pdev, mmc);
+	
+	printk("**** sunxi_mmc_probe finished!\n");
+	
 	return 0;
 
 error_free_dma:
@@ -1271,6 +1308,8 @@ static int sunxi_mmc_remove(struct platform_device *pdev)
 {
 	struct mmc_host	*mmc = platform_get_drvdata(pdev);
 	struct sunxi_mmc_host *host = mmc_priv(mmc);
+
+printk("MMC %s %d \n",__FUNCTION__,__LINE__);
 
 	mmc_remove_host(mmc);
 	disable_irq(host->irq);
