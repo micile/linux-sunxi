@@ -298,7 +298,7 @@ static int arisc_get_dram_cfg(const struct device_node *np)
 	arisc_dram_paras.dram_tpr12  = arisc_read_dt_node(np, "arisc_dram_paras,dram_tpr12");
 	arisc_dram_paras.dram_tpr13  = arisc_read_dt_node(np, "arisc_dram_paras,dram_tpr13");
 
-	printk("arisc_dram_paras.clk         = 0x%x\n", arisc_dram_paras.clk);
+	printk("arisc_dram_paras.clk         = 0x%x\n", arisc_dram_paras.dram_clk);
 	printk("arisc_dram_paras.dram_type   = 0x%x\n", arisc_dram_paras.dram_type);
 	printk("arisc_dram_paras.dram_zq     = 0x%x\n", arisc_dram_paras.dram_zq);
 	printk("arisc_dram_paras.dram_odt_en = 0x%x\n", arisc_dram_paras.dram_odt_en);
