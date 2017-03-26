@@ -217,3 +217,31 @@
 	status = "okay";
 	usb1_vbus-supply = <&reg_vcc5v0>; /* USB1 VBUS is always on */
 };
+
+&arisc {
+	status = "okay";
+	arisc_dram_paras,dram_clk = <0x228>;
+	arisc_dram_paras,dram_type = <0x3>;
+	arisc_dram_paras,dram_zq = <0x3BBB>;
+	arisc_dram_paras,dram_odt_en = <0x1>;
+	arisc_dram_paras,dram_para1 = <0x10F20400>;
+	arisc_dram_paras,dram_para2 = <0x1000>;
+	arisc_dram_paras,dram_mr0 = <0x1C70>;
+	arisc_dram_paras,dram_mr1 = <0x40>;
+	arisc_dram_paras,dram_mr2 = <0x18>;
+	arisc_dram_paras,dram_mr3 = <0x0>;
+	arisc_dram_paras,dram_tpr0 = <0x47214F>;
+	arisc_dram_paras,dram_tpr1 = <0x1C2294B>;
+	arisc_dram_paras,dram_tpr2 = <0x61043>;
+	arisc_dram_paras,dram_tpr3 = <0x0>;
+	arisc_dram_paras,dram_tpr4 = <0x0>;
+	arisc_dram_paras,dram_tpr5 = <0x0>;
+	arisc_dram_paras,dram_tpr6 = <0x0>;
+	arisc_dram_paras,dram_tpr7 = <0x0>;
+	arisc_dram_paras,dram_tpr8 = <0x0>;
+	arisc_dram_paras,dram_tpr9 = <0x0>;
+	arisc_dram_paras,dram_tpr10 = <0x0>;
+	arisc_dram_paras,dram_tpr11 = <0x0>;
+	arisc_dram_paras,dram_tpr12 = <0xA8>;
+	arisc_dram_paras,dram_tpr13 = <0x10901>;
+};

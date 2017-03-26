@@ -1357,7 +1357,7 @@ static int  sunxi_arisc_probe(struct platform_device *pdev)
 #endif
 
 	/* config dram config paras */
-	if (arisc_config_dram_paras()) {
+	if (arisc_config_dram_paras(pdev->dev.of_node)) {
 		ARISC_WRN("config dram paras failed\n");
 	}
 #if (defined CONFIG_ARCH_SUN8IW5P1) || (defined CONFIG_ARCH_SUN9IW1P1)

@@ -62,62 +62,19 @@ typedef struct __DRAM_PARA
 
 static __dram_para_t arisc_dram_paras;
 
-static int arisc_get_dram_cfg(void)
+static int arisc_read_dt_node(const struct device_node *np, const char *name)
 {
-/*
-	// These are dram settings for SINA-33
-	printk("***** SUPER HACK!!! THE DRAM PARAMS ARE HARDCODED FOR SINLINX SINA-33!\n");
-	arisc_dram_paras.dram_clk = 0x228;
-	arisc_dram_paras.dram_type = 0x3;
-	arisc_dram_paras.dram_zq = 0x3BBB;
-	arisc_dram_paras.dram_odt_en = 0x1;
-	arisc_dram_paras.dram_para1 = 0x10F20400;
-	arisc_dram_paras.dram_para2 = 0x1000;
-	arisc_dram_paras.dram_mr0 = 0x1C70;
-	arisc_dram_paras.dram_mr1 = 0x40;
-	arisc_dram_paras.dram_mr2 = 0x18;
-	arisc_dram_paras.dram_mr3 = 0x0;
-	arisc_dram_paras.dram_tpr0 = 0x47214F;
-	arisc_dram_paras.dram_tpr1 = 0x1C2294B;
-	arisc_dram_paras.dram_tpr2 = 0x61043;
-	arisc_dram_paras.dram_tpr3 = 0x0;
-	arisc_dram_paras.dram_tpr4 = 0x0;
-	arisc_dram_paras.dram_tpr5 = 0x0;
-	arisc_dram_paras.dram_tpr6 = 0x0;
-	arisc_dram_paras.dram_tpr7 = 0x0;
-	arisc_dram_paras.dram_tpr8 = 0x0;
-	arisc_dram_paras.dram_tpr9 = 0x0;
-	arisc_dram_paras.dram_tpr10 = 0x0;
-	arisc_dram_paras.dram_tpr11 = 0x0;
-	arisc_dram_paras.dram_tpr12 = 0xA8;
-	arisc_dram_paras.dram_tpr13 = 0x10901;
-*/
-	// These are dram settings for GA10H v1.1 A33 A33G6
-	arisc_dram_paras.dram_clk = 480;
-	arisc_dram_paras.dram_type = 3;
-	arisc_dram_paras.dram_zq = 0x3bbb;
-	arisc_dram_paras.dram_odt_en = 1;
-	arisc_dram_paras.dram_para1 = 285344768;
-	arisc_dram_paras.dram_para2 = 16;
-	arisc_dram_paras.dram_mr0 = 7280;
-	arisc_dram_paras.dram_mr1 = 64;
-	arisc_dram_paras.dram_mr2 = 24;
-	arisc_dram_paras.dram_mr3 = 0;
-	arisc_dram_paras.dram_tpr0 = 0x46210c;
-	arisc_dram_paras.dram_tpr1 = 0x1c2210a;
-	arisc_dram_paras.dram_tpr2 = 0x5403a;
-	arisc_dram_paras.dram_tpr3 = 0x0;
-	arisc_dram_paras.dram_tpr4 = 0x0;
-	arisc_dram_paras.dram_tpr5 = 0x0;
-	arisc_dram_paras.dram_tpr6 = 0x0;
-	arisc_dram_paras.dram_tpr7 = 0x0;
-	arisc_dram_paras.dram_tpr8 = 0x0;
-	arisc_dram_paras.dram_tpr9 = 0x0;
-	arisc_dram_paras.dram_tpr10 = 0x0;
-	arisc_dram_paras.dram_tpr11 = 0x0;
-	arisc_dram_paras.dram_tpr12 = 0xa8;
-	arisc_dram_paras.dram_tpr13 = 0x901;
+	void *ptr;
 
+	ptr = (void*)of_get_property(np, name, NULL);
+	if (ptr) return be32_to_cpup((const void*)ptr);
+	printk("**** Error!  Could not read dts node %s!  This will cause suspend to hang on resume!\n", name);
+	return 0;
+}
+
+
+static int arisc_get_dram_cfg(const struct device_node *np)
+{
 // 	script_item_u val;
 // 	script_item_value_type_e type;
 // 
@@ -313,17 +270,70 @@ static int arisc_get_dram_cfg(void)
 // 	ARISC_INF("dram_tpr13 is %#x\n", val.val);
 // 	arisc_dram_paras.dram_tpr13 = val.val;
 
+
+
+
+	arisc_dram_paras.dram_clk    = arisc_read_dt_node(np, "arisc_dram_paras,dram_clk");
+	arisc_dram_paras.dram_type   = arisc_read_dt_node(np, "arisc_dram_paras,dram_type");
+	arisc_dram_paras.dram_zq     = arisc_read_dt_node(np, "arisc_dram_paras,dram_zq");
+	arisc_dram_paras.dram_odt_en = arisc_read_dt_node(np, "arisc_dram_paras,dram_odt_en");
+	arisc_dram_paras.dram_para1  = arisc_read_dt_node(np, "arisc_dram_paras,dram_para1");
+	arisc_dram_paras.dram_para2  = arisc_read_dt_node(np, "arisc_dram_paras,dram_para2");
+	arisc_dram_paras.dram_mr0    = arisc_read_dt_node(np, "arisc_dram_paras,dram_mr0");
+	arisc_dram_paras.dram_mr1    = arisc_read_dt_node(np, "arisc_dram_paras,dram_mr1");
+	arisc_dram_paras.dram_mr2    = arisc_read_dt_node(np, "arisc_dram_paras,dram_mr2");
+	arisc_dram_paras.dram_mr3    = arisc_read_dt_node(np, "arisc_dram_paras,dram_mr3");
+	arisc_dram_paras.dram_tpr0   = arisc_read_dt_node(np, "arisc_dram_paras,dram_tpr0");
+	arisc_dram_paras.dram_tpr1   = arisc_read_dt_node(np, "arisc_dram_paras,dram_tpr1");
+	arisc_dram_paras.dram_tpr2   = arisc_read_dt_node(np, "arisc_dram_paras,dram_tpr2");
+	arisc_dram_paras.dram_tpr3   = arisc_read_dt_node(np, "arisc_dram_paras,dram_tpr3");
+	arisc_dram_paras.dram_tpr4   = arisc_read_dt_node(np, "arisc_dram_paras,dram_tpr4");
+	arisc_dram_paras.dram_tpr5   = arisc_read_dt_node(np, "arisc_dram_paras,dram_tpr5");
+	arisc_dram_paras.dram_tpr6   = arisc_read_dt_node(np, "arisc_dram_paras,dram_tpr6");
+	arisc_dram_paras.dram_tpr7   = arisc_read_dt_node(np, "arisc_dram_paras,dram_tpr7");
+	arisc_dram_paras.dram_tpr8   = arisc_read_dt_node(np, "arisc_dram_paras,dram_tpr8");
+	arisc_dram_paras.dram_tpr9   = arisc_read_dt_node(np, "arisc_dram_paras,dram_tpr9");
+	arisc_dram_paras.dram_tpr10  = arisc_read_dt_node(np, "arisc_dram_paras,dram_tpr10");
+	arisc_dram_paras.dram_tpr11  = arisc_read_dt_node(np, "arisc_dram_paras,dram_tpr11");
+	arisc_dram_paras.dram_tpr12  = arisc_read_dt_node(np, "arisc_dram_paras,dram_tpr12");
+	arisc_dram_paras.dram_tpr13  = arisc_read_dt_node(np, "arisc_dram_paras,dram_tpr13");
+
+	printk("arisc_dram_paras.clk         = 0x%x\n", arisc_dram_paras.clk);
+	printk("arisc_dram_paras.dram_type   = 0x%x\n", arisc_dram_paras.dram_type);
+	printk("arisc_dram_paras.dram_zq     = 0x%x\n", arisc_dram_paras.dram_zq);
+	printk("arisc_dram_paras.dram_odt_en = 0x%x\n", arisc_dram_paras.dram_odt_en);
+	printk("arisc_dram_paras.dram_para1  = 0x%x\n", arisc_dram_paras.dram_para1);
+	printk("arisc_dram_paras.dram_para2  = 0x%x\n", arisc_dram_paras.dram_para2);
+	printk("arisc_dram_paras.dram_mr0    = 0x%x\n", arisc_dram_paras.dram_mr0);
+	printk("arisc_dram_paras.dram_mr1    = 0x%x\n", arisc_dram_paras.dram_mr1);
+	printk("arisc_dram_paras.dram_mr2    = 0x%x\n", arisc_dram_paras.dram_mr2);
+	printk("arisc_dram_paras.dram_mr3    = 0x%x\n", arisc_dram_paras.dram_mr3);
+	printk("arisc_dram_paras.dram_tpr0   = 0x%x\n", arisc_dram_paras.dram_tpr0);
+	printk("arisc_dram_paras.dram_tpr1   = 0x%x\n", arisc_dram_paras.dram_tpr1);
+	printk("arisc_dram_paras.dram_tpr2   = 0x%x\n", arisc_dram_paras.dram_tpr2);
+	printk("arisc_dram_paras.dram_tpr3   = 0x%x\n", arisc_dram_paras.dram_tpr3);
+	printk("arisc_dram_paras.dram_tpr4   = 0x%x\n", arisc_dram_paras.dram_tpr4);
+	printk("arisc_dram_paras.dram_tpr5   = 0x%x\n", arisc_dram_paras.dram_tpr5);
+	printk("arisc_dram_paras.dram_tpr6   = 0x%x\n", arisc_dram_paras.dram_tpr6);
+	printk("arisc_dram_paras.dram_tpr7   = 0x%x\n", arisc_dram_paras.dram_tpr7);
+	printk("arisc_dram_paras.dram_tpr8   = 0x%x\n", arisc_dram_paras.dram_tpr8);
+	printk("arisc_dram_paras.dram_tpr9   = 0x%x\n", arisc_dram_paras.dram_tpr9);
+	printk("arisc_dram_paras.dram_tpr10  = 0x%x\n", arisc_dram_paras.dram_tpr10);
+	printk("arisc_dram_paras.dram_tpr11  = 0x%x\n", arisc_dram_paras.dram_tpr11);
+	printk("arisc_dram_paras.dram_tpr12  = 0x%x\n", arisc_dram_paras.dram_tpr12);
+	printk("arisc_dram_paras.dram_tpr13  = 0x%x\n", arisc_dram_paras.dram_tpr13);
+
 	return 0;
 }
 
-int arisc_config_dram_paras(void)
+int arisc_config_dram_paras(const struct device_node *np)
 {
 	struct arisc_message *pmessage;
 	u32 *dram_para;
 	u32 index;
 
 	/* parse dram config paras */
-	arisc_get_dram_cfg();
+	arisc_get_dram_cfg(np);
 
 	/* update dram config paras to arisc system */
 	pmessage = arisc_message_allocate(0);

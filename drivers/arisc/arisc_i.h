@@ -69,7 +69,7 @@ extern unsigned int arisc_debug_level;
 extern struct standby_info_para arisc_powchk_back;
 
 //local functions
-extern int arisc_config_dram_paras(void);
+extern int arisc_config_dram_paras(const struct device_node *np);
 extern int arisc_config_ir_paras(void);
 extern int arisc_config_pmu_paras(void);
 extern int arisc_suspend_flag_query(void);
