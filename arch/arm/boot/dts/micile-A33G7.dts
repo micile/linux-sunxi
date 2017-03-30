@@ -55,11 +55,8 @@
 
 	wifi_pwrseq: wifi_pwrseq {
 		compatible = "mmc-pwrseq-simple";
-		pinctrl-names = "default";
-		pinctrl-0 = <&wifi_pwrseq_pin_q8>;
-		post-power-on-delay-ms = <200>;
+		reset-gpios = <&r_pio 0 6 GPIO_ACTIVE_LOW>; 
 	};
-
 };
 
 &backlight {
@@ -142,12 +139,10 @@
 };
 
 &r_pio {
-        wifi_pwrseq_pin_q8: wifi_pwrseq_pin@0 {
-                allwinner,pins = "PL6";
-                allwinner,function = "gpio_in";
-                allwinner,drive = <SUN4I_PINCTRL_10_MA>;
-                allwinner,pull = <SUN4I_PINCTRL_PULL_UP>;
-        };
+	wifi_reset_pin_hardhigh: wifi_reset_pin@0 {
+		pins = "PL6";
+		function = "gpio_out";
+	};
 };
 
 /* Touchscreen */
@@ -202,45 +197,3 @@
 	arisc_dram_paras,dram_tpr12 = <0xa8>;
 	arisc_dram_paras,dram_tpr13 = <0x101>;
 };
-
-/*
-&reg_ldo_io0 {
-	regulator-always-on;
-	regulator-min-microvolt = <2800000>;
-	regulator-max-microvolt = <2800000>;
-	regulator-name = "mic-ldo_io0";
-	status = "okay";
-};
-
-
-&reg_eldo3 {
-	regulator-always-on;
-	regulator-min-microvolt = <2800000>;
-	regulator-max-microvolt = <2800000>;
-	regulator-name = "mic-eldo3";
-};
-
-
-
-&reg_eldo2 {
-	regulator-always-on;
-	regulator-min-microvolt = <1800000>;
-	regulator-max-microvolt = <1800000>;
-	regulator-name = "mic-eldo2";
-};
-
-
-&reg_dldo3 {
-	regulator-always-on;
-	regulator-min-microvolt = <2800000>;
-	regulator-max-microvolt = <2800000>;
-	regulator-name = "mic-dldo3";
-};
-
-&reg_dldo2 {
-	regulator-always-on;
-	regulator-min-microvolt = <3300000>;
-	regulator-max-microvolt = <3300000>;
-	regulator-name = "mic-dldo2";
-};
-*/
