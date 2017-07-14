@@ -3,8 +3,8 @@
 #include "sun8i-q8-common.dtsi"
 
 / {
-    model = "MICILE A33G8";
-    compatible = "micile,A33G8", "allwinner,sun8i-a33";
+    model = "MICILE A33G6";
+    compatible = "micile,A33G6", "allwinner,sun8i-a33";
 
     
 };

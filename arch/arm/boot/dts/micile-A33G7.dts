@@ -1,0 +1,113 @@
+/dts-v1/;
+#include "sun8i-a33.dtsi"
+#include "sun8i-q8-common.dtsi"
+
+/ {
+    model = "MICILE A33G7";
+    compatible = "micile,A33G7", "allwinner,sun8i-a33";
+
+        wifi_pwrseq: wifi_pwrseq {
+                compatible = "mmc-pwrseq-simple";
+                reset-gpios = <&r_pio 0 6 GPIO_ACTIVE_LOW>;
+        };
+};
+
+&touchscreen {
+        reg = <0x40>;
+        compatible = "silead,gsl3675";
+        firmware-name = "silead-micile-A33G7.fw";
+        touchscreen-size-x = <1970>;
+        touchscreen-size-y = <1500>;
+        touchscreen-inverted-y;
+        status = "okay";
+};
+
+&lradc {
+        button@600 {
+                label = "Back";
+                linux,code = <KEY_BACK>;
+                channel = <0>;
+                voltage = <600000>;
+        };
+};
+/*
+&mmc2 {
+        pinctrl-names = "default";
+        pinctrl-0 = <&mmc2_8bit_pins>;
+        vmmc-supply = <&reg_dcdc1>;
+        bus-width = <8>;
+        non-removable;
+        cap-mmc-hw-reset;
+        status = "okay";
+};
+*/
+/*
+&mmc2_8bit_pins {
+*/
+        /* Increase drive strength for DDR modes */
+/*        
+        allwinner,drive = <SUN4I_PINCTRL_40_MA>;
+*/        
+        /* eMMC is missing pull-ups */
+/*        
+        allwinner,pull = <SUN4I_PINCTRL_PULL_UP>;
+};
+*/
+&i2c1 {
+    pinctrl-names = "default";
+    pinctrl-0 = <&i2c1_pins_a>;
+    status = "okay";
+
+    /* Accelerometer */
+        accel: accel@0 {
+                reg = <0x19>;
+                compatible = "bosch,bmc150_accel";
+                status = "okay";
+        };
+};
+
+&axp22x {
+    battery_power_supply: battery-power-supply {
+                compatible = "x-powers,axp221-battery-power-supply";
+                status = "disabled";
+        };
+};
+
+&ac_power_supply {
+    status = "okay";
+};
+
+&battery_power_supply {
+        status = "okay";
+};
+
+&codec {
+    allwinner,pa-gpios = <&pio 7 9 GPIO_ACTIVE_HIGH>; /* PH9 */
+    status = "okay";
+};
+
+&dai {
+    status = "okay";
+};
+
+&sound {
+    status = "okay";
+};
+
+&r_pio {
+        wifi_reset_pin_hardhigh: wifi_reset_pin@0 {
+                pins = "PL6";
+                function = "gpio_out";
+        };
+};
+
+/* Touchscreen */
+&reg_ldo_io1 {
+        regulator-always-on;
+        regulator-min-microvolt = <3300000>;
+        regulator-max-microvolt = <3300000>;
+        regulator-name = "mic-ldo_io1";
+        status = "okay";
+};
+
+
