@@ -1,0 +1,62 @@
+/dts-v1/;
+#include "sun8i-a33.dtsi"
+#include "sun8i-q8-common.dtsi"
+
+/ {
+    model = "MICILE A33G8";
+    compatible = "micile,A33G8", "allwinner,sun8i-a33";
+
+    
+};
+
+&touchscreen {
+	reg = <0x40>;
+	compatible = "silead,gsl3675";
+	firmware-name = "silead-micile-A33G6.fw";
+	touchscreen-size-x = <1630>;
+	touchscreen-size-y = <990>;
+	touchscreen-inverted-y;
+	status = "okay";
+};
+
+&i2c1 {
+    pinctrl-names = "default";
+    pinctrl-0 = <&i2c1_pins_a>;
+    status = "okay";
+
+    /* Accelerometer */
+    mxc6255@15 {
+        compatible = "memsic,mxc6255";
+        reg = <0x15>;
+    };
+};
+
+&axp22x {
+    battery_power_supply: battery-power-supply {
+                compatible = "x-powers,axp221-battery-power-supply";
+                status = "disabled";
+        };
+};
+
+&ac_power_supply {
+    status = "okay";
+};
+
+&battery_power_supply {
+        status = "okay";
+};
+
+&codec {
+    allwinner,pa-gpios = <&pio 7 9 GPIO_ACTIVE_HIGH>; /* PH9 */
+    status = "okay";
+};
+
+&dai {
+    status = "okay";
+};
+
+&sound {
+    status = "okay";
+};
+
+
