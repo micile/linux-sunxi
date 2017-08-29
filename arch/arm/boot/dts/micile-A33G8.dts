@@ -1,0 +1,30 @@
+/dts-v1/;
+#include "sun8i-a33.dtsi"
+#include "sun8i-q8-common.dtsi"
+
+/ {
+    model = "MICILE A33G8";
+    compatible = "micile,A33G8", "allwinner,sun8i-a33";
+};
+
+&touchscreen {
+	reg = <0x40>;
+	compatible = "silead,gsl3675";
+	firmware-name = "silead-micile-A33G8.fw";
+	touchscreen-size-x = <1630>;
+	touchscreen-size-y = <990>;
+	touchscreen-inverted-y;
+	status = "okay";
+};
+
+&i2c1 {
+    pinctrl-names = "default";
+    pinctrl-0 = <&i2c1_pins_a>;
+    status = "okay";
+
+    /* Accelerometer */
+    mxc6255@15 {
+        compatible = "memsic,mxc6255";
+        reg = <0x15>;
+    };
+};
